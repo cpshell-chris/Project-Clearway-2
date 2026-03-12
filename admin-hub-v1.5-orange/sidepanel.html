@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrative Hub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F9EDE7;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ══ SCREEN SYSTEM ══ */
+        .screen { display: none; flex-direction: column; height: 100vh; width: 100%; }
+        .screen.active { display: flex; }
+
+        /* ════════════════════════════════════
+           SCREEN 1 — HUB
+        ════════════════════════════════════ */
+        .hub-header {
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white;
+            padding: 14px 16px;
+            flex-shrink: 0;
+        }
+        .hub-header-row { display: flex; align-items: center; justify-content: space-between; }
+        .hub-header h1 { font-size: 18px; margin-bottom: 3px; }
+        .hub-header p  { font-size: 10px; opacity: 0.85; }
+        .hub-header-btns { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
+        .hub-hiw-btn, .hub-gear-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white; border-radius: 8px;
+            cursor: pointer; transition: background 0.2s; white-space: nowrap;
+        }
+        .hub-hiw-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; }
+        .hub-gear-btn { padding: 6px 10px; font-size: 16px; display: flex; align-items: center; }
+        .hub-hiw-btn:hover, .hub-gear-btn:hover { background: rgba(255,255,255,0.28); }
+
+        .tm-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ccc; margin-right:5px; flex-shrink:0; }
+        .tm-dot.connected { background:#28a745; }
+        .tm-dot.checking  { background:#ffc107; }
+        .tm-dot.error     { background:#dc3545; }
+        .tm-status-row { display:none; align-items:center; padding:4px 12px; font-size:10px; color:#6c757d; background:#f0f2f5; border-bottom:1px solid #dee2e6; }
+        .tm-status-row.visible { display:flex; }
+        .tm-banner {
+            display: none; align-items: center; justify-content: space-between;
+            padding: 5px 16px; background: #eafaf1;
+            border-top: 1px solid #c3e6cb; flex-shrink: 0;
+        }
+        .tm-banner.active { display: flex; }
+        .tm-banner-text { font-size: 11px; color: #1a6b3a; font-weight: 600; }
+        .tm-clear-btn { background: none; border: none; font-size: 11px; color: #888; cursor: pointer; padding: 2px 4px; }
+        .tm-clear-btn:hover { color: #333; }
+
+        .tile-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 6px; padding: 10px; background: white; flex-shrink: 0;
+        }
+        .tile {
+            padding: 18px 10px; background: #FDF4F0;
+            border: 1.5px solid #E8C4B0; border-radius: 10px;
+            font-size: 13px; font-weight: 700; color: #D97757;
+            cursor: pointer; text-align: center; line-height: 1.35; transition: all 0.18s;
+        }
+        .tile:hover { background: #FAE8DF; border-color: #D97757; }
+        .tile.placeholder { color: #C8A898; border-color: #EDCFBF; cursor: default; }
+        .tile.placeholder:hover { background: #FDF4F0; border-color: #EDCFBF; }
+        .tile-coming { display: block; font-size: 9px; font-weight: 500; opacity: 0.65; margin-top: 4px; }
+
+        .hub-body {
+            flex: 1; background: white; border-top: 1px solid #F9EDE7;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+        }
+        .hub-idle-inner { text-align: center; }
+        .hub-idle-icon { font-size: 52px; margin-bottom: 16px; opacity: 0.28; }
+        .hub-idle-text { font-size: 14px; font-weight: 700; color: #4a5568; margin-bottom: 6px; }
+        .hub-idle-sub  { font-size: 12px; color: #6c757d; line-height: 1.6; }
+
+
+        /* ════════════════════════════════════
+           SCREEN 2 — TOOL
+        ════════════════════════════════════ */
+        .tool-header {
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white; padding: 14px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .tool-header-left { display: flex; align-items: center; gap: 8px; }
+        .tool-header-icon { font-size: 18px; line-height: 1; }
+        .tool-header-name { font-size: 17px; font-weight: 700; }
+        .tool-hiw-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white; padding: 6px 12px; border-radius: 8px;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; white-space: nowrap; flex-shrink: 0;
+        }
+        .tool-hiw-btn:hover { background: rgba(255,255,255,0.28); }
+
+        .tool-body { flex: 1; overflow-y: auto; background: white; min-height: 0; }
+
+        .tool-footer {
+            flex-shrink: 0; background: white;
+            border-top: 1px solid #F9EDE7;
+            padding: 10px 16px; display: flex; justify-content: center;
+        }
+        .return-btn {
+            background: rgba(30,60,114,0.07);
+            border: 1.5px solid #E8C4B0; color: #D97757;
+            padding: 8px 22px; border-radius: 20px;
+            font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.18s;
+        }
+        .return-btn:hover { background: #FAE8DF; border-color: #D97757; }
+
+
+        /* ════════════════════════════════════
+           MODALS
+        ════════════════════════════════════ */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.52); z-index: 9999;
+            align-items: center; justify-content: center; padding: 16px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 14px; padding: 20px;
+            width: 100%; max-height: 82vh; overflow-y: auto;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+        }
+        .modal h3 { font-size: 15px; font-weight: 700; color: #7A3520; margin-bottom: 12px; }
+        .modal-body { font-size: 12px; color: #4a5568; line-height: 1.65; margin-bottom: 10px; }
+        .modal-divider { border: none; border-top: 1px solid #dee2e6; margin: 10px 0; }
+        .modal-section { border-top: 1px solid #EDD5C8; padding-top: 14px; margin-top: 14px; }
+        .modal-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+        .modal-label { font-size: 13px; font-weight: 700; color: #7A3520; margin-bottom: 3px; }
+        .modal-sub   { font-size: 11px; color: #6c757d; margin-bottom: 8px; }
+        .modal-field-label { font-size: 11px; font-weight: 600; color: #4a5568; margin-top: 8px; margin-bottom: 4px; }
+        .settings-input {
+            width: 100%; padding: 8px 10px; border: 1.5px solid #EDCFBF;
+            border-radius: 8px; font-size: 12px; color: #7A3520;
+            margin-bottom: 8px; background: #fafbfc;
+        }
+        .settings-input:focus { outline: none; border-color: #D97757; background: white; }
+        .save-msg { font-size: 11px; color: #1a6b3a; font-weight: 600; min-height: 16px; margin-top: 2px; }
+
+        /* Buttons */
+        .btn {
+            display: block; width: 100%; padding: 10px 14px; border: none;
+            border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; margin-bottom: 8px; transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: linear-gradient(135deg, #7A3520 0%, #D97757 100%); color: white; }
+        .btn-primary:hover { opacity: 0.92; }
+        .btn-secondary { background: #FDF4F0; color: #D97757; border: 1.5px solid #E8C4B0; }
+        .btn-secondary:hover { background: #FAE8DF; }
+
+
+        /* ════════════════════════════════════
+           SERVICE OFFERING DEVELOPER
+        ════════════════════════════════════ */
+        .sod-view { display: none; flex-direction: column; }
+        .sod-view.active { display: flex; }
+
+        .intro { padding: 16px; border-bottom: 1px solid #f0f0f0; }
+        .intro h2 { font-size: 15px; color: #7A3520; margin-bottom: 6px; }
+        .intro p  { font-size: 12px; color: #6c757d; line-height: 1.5; margin-bottom: 4px; }
+
+        .sod-menu-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 12px;
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white; transition: opacity 0.2s; text-align: left;
+        }
+        .sod-menu-btn:hover { opacity: 0.88; }
+
+        .view-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px 0; margin-bottom: 14px;
+        }
+        .view-title { font-size: 14px; font-weight: 700; color: #7A3520; }
+        .btn-back {
+            background: none; border: 1px solid #dee2e6; border-radius: 6px;
+            padding: 5px 10px; font-size: 11px; cursor: pointer; color: #6c757d;
+        }
+        .btn-back:hover { background: #f8f9fa; }
+
+        .chat-messages {
+            flex: 1; overflow-y: auto; margin-bottom: 10px;
+            min-height: 200px; max-height: 340px;
+        }
+        .msg { margin-bottom: 10px; }
+        .msg-user { text-align: right; }
+        .msg-user span {
+            display: inline-block;
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white; padding: 8px 12px;
+            border-radius: 14px 14px 2px 14px; font-size: 12px; max-width: 85%;
+        }
+        .msg-ai span {
+            display: inline-block; background: white;
+            border: 1px solid #dee2e6; color: #212529; padding: 8px 12px;
+            border-radius: 14px 14px 14px 2px; font-size: 12px; max-width: 90%; line-height: 1.5;
+        }
+        .chat-input-row { display: flex; gap: 6px; margin-bottom: 8px; }
+        .chat-input-row textarea {
+            flex: 1; padding: 8px; border: 2px solid #dee2e6;
+            border-radius: 6px; font-size: 12px; font-family: inherit; resize: none;
+        }
+        .chat-input-row textarea:focus { outline: none; border-color: #D97757; }
+        .chat-send-btn {
+            padding: 8px 14px;
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white; border: none; border-radius: 6px; font-size: 18px; cursor: pointer;
+        }
+
+        .build-bar { display: none; padding: 10px 16px; background: white; border-top: 2px solid #dee2e6; }
+        .build-bar.active { display: block; }
+        .build-bar-btn {
+            width: 100%; padding: 11px;
+            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+            color: #212529; border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .build-bar-btn:hover { opacity: 0.92; }
+
+        .def-section {
+            background: #fafbfc; border: 1px solid #F9EDE7;
+            border-radius: 8px; padding: 12px; margin-bottom: 10px;
+        }
+        .def-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .def-section-header h4 { color: #7A3520; font-size: 12px; }
+        .regen-btn {
+            background: #ffc107; color: #212529; border: none;
+            padding: 4px 9px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer;
+        }
+        .regen-btn:hover { background: #e0a800; }
+        .regen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .def-textarea {
+            width: 100%; padding: 8px; border: 1.5px solid #EDCFBF;
+            border-radius: 6px; font-size: 11px; font-family: inherit;
+            resize: vertical; line-height: 1.5; background: white;
+        }
+        .def-textarea:focus { outline: none; border-color: #D97757; }
+
+        .action-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+        .action-btn-copy { background: #28a745; color: white; }
+        .action-btn-copy:hover { background: #218838; }
+        .action-btn-mktg { background: linear-gradient(135deg, #7A3520 0%, #D97757 100%); color: white; }
+        .action-btn-new  { background: #6c757d; color: white; }
+
+        .mktg-label { font-size: 11px; font-weight: 600; color: #7A3520; margin-bottom: 4px; display: block; }
+        .mktg-input, .mktg-textarea {
+            width: 100%; padding: 8px; border: 1.5px solid #EDCFBF;
+            border-radius: 6px; font-size: 12px; font-family: inherit; margin-bottom: 10px;
+        }
+        .mktg-textarea { min-height: 70px; resize: vertical; }
+        .mktg-input:focus, .mktg-textarea:focus { outline: none; border-color: #D97757; }
+
+        .mktg-result-section {
+            background: #fafbfc; border-radius: 8px; padding: 12px;
+            margin-bottom: 10px; border-left: 3px solid #D97757;
+        }
+        .mktg-result-section h4 { color: #7A3520; font-size: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .mktg-copy-btn { background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        .mktg-content { font-size: 11px; line-height: 1.6; color: #495057; white-space: pre-wrap; }
+
+        .typing-indicator span {
+            display: inline-block; width: 6px; height: 6px; background: #adb5bd;
+            border-radius: 50%; margin: 0 2px; animation: bounce 1.2s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+
+        .loading { display: none; text-align: center; padding: 20px; }
+        .loading.active { display: block; }
+        .spinner {
+            width: 28px; height: 28px; border: 3px solid #dee2e6;
+            border-top-color: #D97757; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ════════════════════════════════════
+           ASK ME ANYTHING TOOL
+        ════════════════════════════════════ */
+        .ama-view { display: none; flex-direction: column; }
+        .ama-view.active { display: flex; }
+
+        /* Mode menu buttons */
+        .ama-mode-btn {
+            display: flex; align-items: flex-start; gap: 12px;
+            width: 100%; padding: 14px 16px; margin-bottom: 10px;
+            background: white; border: 1.5px solid #E8C4B0;
+            border-radius: 10px; cursor: pointer; text-align: left;
+            transition: all 0.18s;
+        }
+        .ama-mode-btn:hover { background: #FAE8DF; border-color: #D97757; }
+        .ama-mode-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+        .ama-mode-label { font-size: 13px; font-weight: 700; color: #7A3520; margin-bottom: 3px; }
+        .ama-mode-sub   { font-size: 11px; color: #6c757d; line-height: 1.45; }
+
+        /* Step sections */
+        .ama-step {
+            background: white; border: 1px solid #F9EDE7;
+            border-radius: 10px; padding: 14px; margin-bottom: 10px;
+        }
+        .ama-step-label {
+            font-size: 11px; font-weight: 700; color: #D97757;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+        }
+
+        /* In-person / Phone toggle */
+        .ama-toggle-row { display: flex; gap: 8px; }
+        .ama-toggle-btn {
+            flex: 1; padding: 9px 6px; border-radius: 8px;
+            border: 1.5px solid #E8C4B0; background: #FDF4F0;
+            font-size: 12px; font-weight: 600; color: #D97757;
+            cursor: pointer; text-align: center; transition: all 0.18s;
+        }
+        .ama-toggle-btn.active { background: #3D3D3D; color: white; border-color: #3D3D3D; }
+        .ama-toggle-btn:hover:not(.active) { background: #FAE8DF; border-color: #D97757; }
+
+        /* Vehicle context pill */
+        .ama-vehicle-pill {
+            display: none; align-items: center; gap: 6px;
+            background: #eafaf1; border: 1px solid #c3e6cb;
+            border-radius: 20px; padding: 5px 12px; margin-top: 8px;
+            font-size: 11px; color: #1a6b3a; font-weight: 600;
+        }
+        .ama-vehicle-pill.active { display: flex; }
+
+        /* Related ROs notice */
+        .ama-related-ro {
+            display: none; background: #fff8e1; border: 1px solid #ffe082;
+            border-radius: 8px; padding: 8px 12px; margin-top: 8px;
+            font-size: 11px; color: #6d4c00; line-height: 1.5;
+        }
+        .ama-related-ro.active { display: block; }
+        .ama-related-ro strong { color: #5d3f00; }
+
+        /* Textarea inputs */
+        .ama-textarea {
+            width: 100%; padding: 9px 10px; border: 1.5px solid #EDCFBF;
+            border-radius: 8px; font-size: 12px; font-family: inherit;
+            resize: vertical; line-height: 1.55; background: white; color: #212529;
+        }
+        .ama-textarea:focus { outline: none; border-color: #D97757; }
+        .ama-textarea.context-field { min-height: 56px; color: #6c757d; }
+
+        /* Generate button */
+        .ama-generate-btn {
+            width: 100%; padding: 11px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white; font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: opacity 0.18s; margin-top: 4px;
+        }
+        .ama-generate-btn:hover { opacity: 0.9; }
+        .ama-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Response area */
+        .ama-response-box {
+            background: #fafbfc; border: 1px solid #EDD5C8;
+            border-left: 3px solid #D97757; border-radius: 8px;
+            padding: 14px; font-size: 12px; color: #212529;
+            line-height: 1.7; white-space: pre-wrap; margin-bottom: 10px;
+        }
+
+        /* Post-response actions */
+        .ama-action-row {
+            display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+        }
+        .ama-action-btn {
+            flex: 1; min-width: 80px; padding: 7px 8px; border-radius: 20px;
+            border: 1.5px solid #E8C4B0; background: #FDF4F0;
+            font-size: 11px; font-weight: 600; color: #D97757;
+            cursor: pointer; text-align: center; transition: all 0.18s; white-space: nowrap;
+        }
+        .ama-action-btn:hover { background: #FAE8DF; border-color: #D97757; }
+        .ama-action-btn.copy-btn { background: #1a6b3a; color: white; border-color: #1a6b3a; }
+        .ama-action-btn.copy-btn:hover { opacity: 0.88; }
+
+        /* Feedback chips — length + technical */
+        .ama-feedback-group { margin-bottom: 10px; }
+        .ama-feedback-label {
+            font-size: 10px; font-weight: 700; color: #6c757d;
+            text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px;
+        }
+        .ama-chip-row { display: flex; gap: 5px; }
+        .ama-chip {
+            flex: 1; padding: 6px 4px; border-radius: 16px;
+            border: 1.5px solid #E8C4B0; background: #FDF4F0;
+            font-size: 10px; font-weight: 600; color: #4a5568;
+            cursor: pointer; text-align: center; transition: all 0.18s;
+        }
+        .ama-chip:hover { background: #FAE8DF; border-color: #D97757; color: #D97757; }
+        .ama-chip.selected { background: #3D3D3D; color: white; border-color: #3D3D3D; }
+
+        /* Chat refinement thread */
+        .ama-chat-thread {
+            border-top: 1px solid #F9EDE7; padding-top: 10px; margin-top: 4px;
+        }
+        .ama-chat-input-row { display: flex; gap: 6px; }
+        .ama-chat-input {
+            flex: 1; padding: 8px 10px; border: 1.5px solid #EDCFBF;
+            border-radius: 8px; font-size: 12px; font-family: inherit;
+            background: white; resize: none;
+        }
+        .ama-chat-input:focus { outline: none; border-color: #D97757; }
+        .ama-chat-send {
+            padding: 8px 13px;
+            background: linear-gradient(135deg, #7A3520 0%, #D97757 100%);
+            color: white; border: none; border-radius: 8px;
+            font-size: 16px; cursor: pointer;
+        }
+
+        /* Review sentiment tag */
+        .ama-sentiment-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .ama-sentiment-btn {
+            flex: 1; padding: 8px; border-radius: 8px;
+            border: 1.5px solid #E8C4B0; background: #FDF4F0;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            text-align: center; transition: all 0.18s; color: #D97757;
+        }
+        .ama-sentiment-btn.positive.active { background: #1a6b3a; color: white; border-color: #1a6b3a; }
+        .ama-sentiment-btn.negative.active { background: #c0392b; color: white; border-color: #c0392b; }
+        .ama-sentiment-btn:hover:not(.active) { background: #FAE8DF; border-color: #D97757; }
+    </style>
+</head>
+<body>
+
+    <!-- ══════════════════════════════════════
+         SCREEN 1 — ADMINISTRATIVE HUB
+    ══════════════════════════════════════ -->
+    <div class="screen active" id="screen-hub">
+
+        <div class="hub-header">
+            <div class="hub-header-row">
+                <div>
+                    <h1>🏢 Administrative Hub</h1>
+                    <p>Cardinal Plaza Shell</p>
+                </div>
+                <div class="hub-header-btns">
+                    <button class="hub-hiw-btn" id="hub-hiw-btn" type="button">How it works?</button>
+                    <button class="hub-gear-btn" id="hub-gear-btn" type="button" title="Settings">⚙️</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tm-status-row" id="tm-status-row">
+            <span class="tm-dot" id="tm-dot"></span>
+            <span id="tm-status-text">Not connected</span>
+        </div>
+
+        <div class="tm-banner" id="tm-banner">
+            <span class="tm-banner-text" id="tm-banner-text">✅ RO loaded</span>
+            <button class="tm-clear-btn" id="tm-clear-btn" type="button">✕ Clear</button>
+        </div>
+
+        <div class="tile-grid">
+            <div class="tile" id="tile-tool-a">⭐ Google Response</div>
+            <div class="tile" id="tile-tool-b">📦 Service Offering Developer</div>
+        </div>
+
+        <div class="hub-body">
+            <div class="hub-idle-inner">
+                <div class="hub-idle-icon">🚙</div>
+                <p class="hub-idle-text">Select a tool above to get started.</p>
+                <p class="hub-idle-sub">Tap "How it works?" for a full overview.</p>
+            </div>
+        </div>
+
+        <!-- Hub HiW Modal -->
+        <div class="modal-overlay" id="hub-hiw-modal">
+            <div class="modal">
+                <h3>🏢 How the Administrative Hub Works</h3>
+                <p class="modal-body"><strong>Select any tile</strong> to open that tool. The tool fills the entire sidebar for a clean, focused experience. Tap the return button at the bottom to come back here.</p>
+                <hr class="modal-divider">
+                <p class="modal-body"><strong>🔌 TekMetric Integration</strong><br>When you open a Repair Order in TekMetric, the Hub detects it automatically — customer, vehicle, and mileage context appear in the green banner and are available to all tools.</p>
+                <hr class="modal-divider">
+                <p class="modal-body"><strong>⚙️ Settings</strong><br>Tap the gear icon to configure your Claude API key and TekMetric connection. Set once and all tools share the same credentials.</p>
+                <hr class="modal-divider">
+                <p class="modal-body"><strong>📦 Service Offering Developer</strong><br>Build new service offerings through an AI-guided conversation, then generate a complete service definition and marketing materials — all in Cardinal Plaza Shell's voice.</p>
+                <button class="btn btn-primary" id="hub-hiw-close" type="button" style="margin-bottom:0;margin-top:8px;">Got It</button>
+            </div>
+        </div>
+
+        <!-- Hub Settings Modal -->
+        <div class="modal-overlay" id="hub-settings-modal">
+            <div class="modal">
+                <h3>⚙️ Hub Settings</h3>
+                <div class="modal-section">
+                    <div class="modal-label">Claude API Key</div>
+                    <div class="modal-sub">Required for all AI-powered tools</div>
+                    <input type="password" id="hub-api-key-input" class="settings-input" placeholder="sk-ant-..." />
+                    <button class="btn btn-primary" id="hub-save-api-btn" type="button" style="margin-bottom:0;">💾 Save API Key</button>
+                    <div class="save-msg" id="hub-api-save-msg"></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-label">TekMetric Connection</div>
+                    <div class="modal-sub">Auto-detects repair orders when you open them</div>
+                    <div class="modal-field-label">Cloud Run URL</div>
+                    <input class="settings-input" id="hub-tm-cloudrun-input" placeholder="https://your-service.run.app" />
+                    <div class="modal-field-label">Shop ID</div>
+                    <input class="settings-input" id="hub-tm-shopid-input" placeholder="238" />
+                    <button class="btn btn-primary" id="hub-tm-save-btn" type="button" style="margin-bottom:0;">🔗 Save &amp; Test Connection</button>
+                    <div class="save-msg" id="hub-tm-save-msg"></div>
+                </div>
+                <button class="btn btn-secondary" id="hub-modal-close" type="button" style="margin-top:8px;margin-bottom:0;">Close</button>
+            </div>
+        </div>
+
+    </div><!-- /#screen-hub -->
+
+
+    <!-- ══════════════════════════════════════
+         SCREEN 2 — TOOL
+    ══════════════════════════════════════ -->
+    <div class="screen" id="screen-tool">
+
+        <div class="tool-header" id="tool-header">
+            <div class="tool-header-left">
+                <span class="tool-header-icon" id="tool-header-icon"></span>
+                <span class="tool-header-name" id="tool-header-name"></span>
+            </div>
+            <button class="tool-hiw-btn" id="tool-hiw-btn" type="button">How it works?</button>
+        </div>
+
+        <div class="tool-body" id="tool-body">
+
+            <!-- ── ASK ME ANYTHING ── -->
+            <div id="tool-a-content" style="display:none;">
+
+                <!-- Mode Menu -->
+                <div id="ama-menu" class="ama-view active">
+                    <div class="intro">
+                        <h2>Google Response</h2>
+                        <p>Craft on-brand Google review responses and answer customer questions — in Cardinal Plaza Shell's voice.</p>
+                    </div>
+                    <div style="padding:12px 16px 16px;">
+                        <button class="ama-mode-btn" id="ama-mode-review" type="button">
+                            <span class="ama-mode-icon">⭐</span>
+                            <div>
+                                <div class="ama-mode-label">Respond to a Google Review</div>
+                                <div class="ama-mode-sub">Positive or negative — varied, on-brand responses optimized for Google</div>
+                            </div>
+                        </button>
+                        <button class="ama-mode-btn" id="ama-mode-customer" type="button">
+                            <span class="ama-mode-icon">💬</span>
+                            <div>
+                                <div class="ama-mode-label">Answer a Customer Question</div>
+                                <div class="ama-mode-sub">In-person or phone — questions, objections, and helping customers make the right decision</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Customer Question View -->
+                <div id="ama-customer-view" class="ama-view">
+                    <div class="view-header">
+                        <span class="view-title">💬 Customer Question</span>
+                        <button class="btn-back" id="ama-back-customer" type="button">← Menu</button>
+                    </div>
+                    <div style="padding:0 16px 16px;">
+
+                        <!-- Step 1: Customer location -->
+                        <div class="ama-step">
+                            <div class="ama-step-label">Customer Location</div>
+                            <div class="ama-toggle-row">
+                                <button class="ama-toggle-btn" id="ama-loc-inperson" type="button">👤 In Person</button>
+                                <button class="ama-toggle-btn" id="ama-loc-phone" type="button">📞 On the Phone</button>
+                            </div>
+                            <!-- Vehicle context from TM (auto-populated) -->
+                            <div class="ama-vehicle-pill" id="ama-vehicle-pill">
+                                <span>🚗</span>
+                                <span id="ama-vehicle-pill-text">Vehicle loaded</span>
+                            </div>
+                            <!-- Related ROs notice -->
+                            <div class="ama-related-ro" id="ama-related-ro">
+                                <strong>📋 Related ROs found:</strong>
+                                <span id="ama-related-ro-text"></span>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: The question -->
+                        <div class="ama-step">
+                            <div class="ama-step-label">What does the customer want to know?</div>
+                            <textarea class="ama-textarea" id="ama-question-input" rows="3"
+                                placeholder="Type the customer's question or describe the situation…"></textarea>
+                        </div>
+
+                        <!-- Step 3: Additional context (optional) -->
+                        <div class="ama-step">
+                            <div class="ama-step-label">Additional Context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>
+                            <textarea class="ama-textarea context-field" id="ama-context-input" rows="2"
+                                placeholder="Any extra info the AI should know (usually leave blank)…"></textarea>
+                        </div>
+
+                        <button class="ama-generate-btn" id="ama-customer-generate" type="button">✨ Generate Response</button>
+
+                        <!-- Loading -->
+                        <div id="ama-customer-loading" class="loading" style="margin-top:10px;">
+                            <div class="spinner"></div>
+                            <p style="font-size:12px;color:#6c757d;">Thinking…</p>
+                        </div>
+
+                        <!-- Response -->
+                        <div id="ama-customer-result" style="display:none;margin-top:12px;">
+
+                            <div class="ama-response-box" id="ama-customer-response-text"></div>
+
+                            <!-- Copy + Start Over -->
+                            <div class="ama-action-row">
+                                <button class="ama-action-btn copy-btn" id="ama-customer-copy" type="button">📋 Copy</button>
+                                <button class="ama-action-btn" id="ama-customer-reset" type="button">🔄 Start Over</button>
+                            </div>
+
+                            <!-- Length feedback -->
+                            <div class="ama-feedback-group">
+                                <div class="ama-feedback-label">Response Length</div>
+                                <div class="ama-chip-row">
+                                    <div class="ama-chip" data-group="length" data-val="shorter">Too Long</div>
+                                    <div class="ama-chip" data-group="length" data-val="good">Just Right ✓</div>
+                                    <div class="ama-chip" data-group="length" data-val="longer">Too Short</div>
+                                </div>
+                            </div>
+
+                            <!-- Technical feedback -->
+                            <div class="ama-feedback-group">
+                                <div class="ama-feedback-label">Technical Detail</div>
+                                <div class="ama-chip-row">
+                                    <div class="ama-chip" data-group="technical" data-val="less">Less Technical</div>
+                                    <div class="ama-chip" data-group="technical" data-val="good">Just Right ✓</div>
+                                    <div class="ama-chip" data-group="technical" data-val="more">More Detail</div>
+                                </div>
+                            </div>
+
+                            <!-- Refinement chat -->
+                            <div class="ama-chat-thread">
+                                <div id="ama-customer-thread" style="margin-bottom:8px;"></div>
+                                <div class="ama-chat-input-row">
+                                    <textarea class="ama-chat-input" id="ama-customer-refine-input" rows="2"
+                                        placeholder="Ask for changes… e.g. 'make it friendlier' or 'add more about our warranty'"></textarea>
+                                    <button class="ama-chat-send" id="ama-customer-refine-send" type="button">➤</button>
+                                </div>
+                            </div>
+
+                            <!-- Divider -->
+                            <div style="border-top:1px solid #E8C4B0;margin:14px 0 10px;"></div>
+
+                            <!-- Follow-up question -->
+                            <div class="ama-feedback-group" style="margin-bottom:0;">
+                                <div class="ama-feedback-label">Ask a Follow-Up Question</div>
+                                <div style="font-size:11px;color:#6c757d;margin-bottom:8px;">The answer will be added below the current response.</div>
+                                <div class="ama-chat-input-row">
+                                    <textarea class="ama-chat-input" id="ama-customer-followup-input" rows="2"
+                                        placeholder="e.g. 'What should the customer do next?' or 'How long does this typically take?'"></textarea>
+                                    <button class="ama-chat-send" id="ama-customer-followup-send" type="button">➤</button>
+                                </div>
+                                <div id="ama-customer-followup-loading" style="display:none;padding:6px 0;font-size:11px;color:#6c757d;">Thinking…</div>
+                            </div>
+
+                            <!-- Follow-up responses appended here -->
+                            <div id="ama-customer-followup-results"></div>
+
+                        </div><!-- /#ama-customer-result -->
+                    </div>
+                </div><!-- /#ama-customer-view -->
+
+                <!-- Google Review View -->
+                <div id="ama-review-view" class="ama-view">
+                    <div class="view-header">
+                        <span class="view-title">⭐ Google Review</span>
+                        <button class="btn-back" id="ama-back-review" type="button">← Menu</button>
+                    </div>
+                    <div style="padding:0 16px 16px;">
+
+                        <!-- RO Vehicle Pill -->
+                        <div class="vehicle-pill" id="ama-review-vehicle-pill" style="display:none;margin-bottom:10px;">
+                            <span>🚗</span>
+                            <span id="ama-review-vehicle-pill-text"></span>
+                        </div>
+
+                        <!-- Step 1: Sentiment -->
+                        <div class="ama-step">
+                            <div class="ama-step-label">Review Type</div>
+                            <div class="ama-sentiment-row">
+                                <button class="ama-sentiment-btn positive" id="ama-review-positive" type="button">👍 Positive</button>
+                                <button class="ama-sentiment-btn negative" id="ama-review-negative" type="button">👎 Negative</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Review text -->
+                        <div class="ama-step">
+                            <div class="ama-step-label">Review Text or Summary</div>
+                            <textarea class="ama-textarea" id="ama-review-input" rows="4"
+                                placeholder="Paste the review text, or describe what the customer said…"></textarea>
+                        </div>
+
+                        <!-- Step 3: Additional context -->
+                        <div class="ama-step">
+                            <div class="ama-step-label">Additional Context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>
+                            <textarea class="ama-textarea context-field" id="ama-review-context-input" rows="2"
+                                placeholder="Anything else the AI should know about this situation…"></textarea>
+                        </div>
+
+                        <button class="ama-generate-btn" id="ama-review-generate" type="button">✨ Generate Response</button>
+
+                        <!-- Loading -->
+                        <div id="ama-review-loading" class="loading" style="margin-top:10px;">
+                            <div class="spinner"></div>
+                            <p style="font-size:12px;color:#6c757d;">Crafting response…</p>
+                        </div>
+
+                        <!-- Response -->
+                        <div id="ama-review-result" style="display:none;margin-top:12px;">
+
+                            <div class="ama-response-box" id="ama-review-response-text"></div>
+
+                            <!-- Copy + Another Review + Start Over -->
+                            <div class="ama-action-row">
+                                <button class="ama-action-btn copy-btn" id="ama-review-copy" type="button">📋 Copy</button>
+                                <button class="ama-action-btn" id="ama-review-another" type="button">⭐ Another Review</button>
+                                <button class="ama-action-btn" id="ama-review-reset" type="button">🔄 Start Over</button>
+                            </div>
+
+                            <!-- Length feedback -->
+                            <div class="ama-feedback-group">
+                                <div class="ama-feedback-label">Response Length</div>
+                                <div class="ama-chip-row">
+                                    <div class="ama-chip" data-group="review-length" data-val="shorter">Too Long</div>
+                                    <div class="ama-chip" data-group="review-length" data-val="good">Just Right ✓</div>
+                                    <div class="ama-chip" data-group="review-length" data-val="longer">Too Short</div>
+                                </div>
+                            </div>
+
+                            <!-- Refinement chat -->
+                            <div class="ama-chat-thread">
+                                <div id="ama-review-thread" style="margin-bottom:8px;"></div>
+                                <div class="ama-chat-input-row">
+                                    <textarea class="ama-chat-input" id="ama-review-refine-input" rows="2"
+                                        placeholder="Ask for changes… e.g. 'warmer tone' or 'mention our free services'"></textarea>
+                                    <button class="ama-chat-send" id="ama-review-refine-send" type="button">➤</button>
+                                </div>
+                            </div>
+
+                        </div><!-- /#ama-review-result -->
+                    </div>
+                </div><!-- /#ama-review-view -->
+
+            </div><!-- /#tool-a-content -->
+
+            <!-- Service Offering Developer -->
+            <div id="tool-b-content" style="display:none;">
+
+                <div id="sod-menu" class="sod-view active">
+                    <div class="intro">
+                        <h2>Service Offering Developer</h2>
+                        <p>Build new service offerings with AI guidance, or generate complete marketing and training materials for existing services.</p>
+                    </div>
+                    <div style="padding:12px 16px 0;">
+                        <button class="sod-menu-btn" id="sod-develop-btn" type="button">
+                            💡 Develop New Service
+                            <div style="font-size:10px;font-weight:400;margin-top:3px;opacity:0.85;">AI-guided conversation to define a new offering</div>
+                        </button>
+                        <button class="sod-menu-btn" id="sod-marketing-btn" type="button">
+                            📢 Create Marketing Materials
+                            <div style="font-size:10px;font-weight:400;margin-top:3px;opacity:0.85;">Generate materials for an existing service</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="sod-chat-view" class="sod-view">
+                    <div class="view-header">
+                        <span class="view-title">💡 Develop New Service</span>
+                        <button class="btn-back" id="sod-back-1" type="button">← Menu</button>
+                    </div>
+                    <div style="padding:0 16px;flex:1;display:flex;flex-direction:column;">
+                        <div id="sod-chat-messages" class="chat-messages"></div>
+                        <div class="chat-input-row">
+                            <textarea id="sod-chat-input" rows="2" placeholder="Describe your service idea..."></textarea>
+                            <button class="chat-send-btn" id="sod-send-btn" type="button">➤</button>
+                        </div>
+                    </div>
+                    <div class="build-bar" id="sod-build-bar">
+                        <button class="build-bar-btn" id="sod-build-btn" type="button">📦 Build Service Package</button>
+                    </div>
+                </div>
+
+                <div id="sod-definition-view" class="sod-view">
+                    <div class="view-header">
+                        <span class="view-title">📋 Service Definition</span>
+                        <button class="btn-back" id="sod-back-2" type="button">← Menu</button>
+                    </div>
+                    <div style="padding:0 16px;">
+                        <div id="sod-definition-sections"></div>
+                        <div class="action-btns" style="padding-bottom:16px;">
+                            <button class="btn action-btn-copy" id="sod-copy-def-btn" type="button">📄 Copy Definition</button>
+                            <button class="btn action-btn-mktg" id="sod-to-mktg-btn" type="button">📢 Generate Marketing Materials</button>
+                            <button class="btn action-btn-new"  id="sod-new-service-btn" type="button">🔄 Start New Service</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sod-marketing-view" class="sod-view">
+                    <div class="view-header">
+                        <span class="view-title">📢 Marketing Materials</span>
+                        <button class="btn-back" id="sod-back-3" type="button">← Menu</button>
+                    </div>
+                    <div style="padding:0 16px 16px;">
+                        <div id="sod-mktg-form">
+                            <label class="mktg-label" style="margin-top:4px;">Service Name</label>
+                            <input class="mktg-input" id="sod-mktg-name" placeholder="e.g. Annual Vehicle Health Assessment">
+                            <label class="mktg-label">Service Description</label>
+                            <textarea class="mktg-textarea" id="sod-mktg-desc" placeholder="Brief description of what this service is..."></textarea>
+                            <label class="mktg-label">Time Estimate (hours)</label>
+                            <input class="mktg-input" id="sod-mktg-hours" placeholder="e.g. 2-3 hours">
+                            <label class="mktg-label">Recommended Frequency</label>
+                            <input class="mktg-input" id="sod-mktg-freq" placeholder="e.g. Annual">
+                            <label class="mktg-label">Additional Context <span style="font-weight:400">(optional)</span></label>
+                            <textarea class="mktg-textarea" id="sod-mktg-extra" placeholder="Anything else the AI should know..."></textarea>
+                            <button class="btn btn-primary" id="sod-mktg-generate-btn" type="button" style="margin-bottom:0;">✨ Generate Materials</button>
+                        </div>
+                        <div id="sod-mktg-loading" class="loading">
+                            <div class="spinner"></div>
+                            <p style="font-size:12px;color:#6c757d;">Generating marketing materials…</p>
+                        </div>
+                        <div id="sod-mktg-results" style="display:none;"></div>
+                    </div>
+                </div>
+
+            </div><!-- /#tool-b-content -->
+
+        </div><!-- /.tool-body -->
+
+        <div class="tool-footer">
+            <button class="return-btn" id="return-to-hub-btn" type="button">← Administrative Hub</button>
+        </div>
+
+        <!-- Tool HiW Modal (content set by JS) -->
+        <div class="modal-overlay" id="tool-hiw-modal">
+            <div class="modal">
+                <h3 id="tool-hiw-title"></h3>
+                <div id="tool-hiw-body"></div>
+                <button class="btn btn-primary" id="tool-hiw-close" type="button" style="margin-bottom:0;margin-top:8px;">Got It</button>
+            </div>
+        </div>
+
+    </div><!-- /#screen-tool -->
+
+    <script src="sidepanel.js"></script>
+</body>
+</html>
