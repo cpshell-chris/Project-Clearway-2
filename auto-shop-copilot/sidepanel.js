@@ -2424,10 +2424,11 @@ function swOpenScheduler(e) {
     const shopId = swRoData?.shopId || ASC_SHOP_ID;
     const dateToUse = swSelectedDate ? new Date(swSelectedDate) : (swTargetDate || new Date());
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-        const tabUrl = tabs[0]?.url || '';
+        const currentTab = tabs[0];
+        const tabUrl = currentTab?.url || '';
         const baseUrl = tabUrl.includes('sandbox.tekmetric.com') ? 'https://sandbox.tekmetric.com' : 'https://shop.tekmetric.com';
-        const url = `${baseUrl}/admin/shop/${shopId}/appointments?view=day&dayViewResource=DEFAULT&date=${encodeURIComponent(dateToUse.toISOString())}`;
-        chrome.tabs.create({ url });
+        const url = `${baseUrl}/admin/shop/${shopId}/appointments?date=${encodeURIComponent(dateToUse.toISOString())}`;
+        chrome.tabs.create({ url, index: (currentTab?.index ?? 0) + 1 });
     });
 }
 
