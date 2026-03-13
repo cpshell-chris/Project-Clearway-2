@@ -117,6 +117,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
+  if (request.action === 'asc_searchLiveROs') {
+    searchLiveROs(request.query || '')
+      .then(r  => sendResponse({ success: true,  data:  r }))
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
 
   return true;
 });
@@ -1045,6 +1051,17 @@ async function tmSearch(query, searchType) {
     return tmGetRepairOrder(query);
   }
   throw new Error('Customer search not yet implemented. Use RO number search.');
+}
+
+async function searchLiveROs(query) {
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
+  const params = new URLSearchParams({ shopId: ASC_SHOP_ID, size: '15' });
+  if (query && query.trim()) params.set('q', query.trim());
+  const res = await fetch(`${baseUrl}/ro-search?${params.toString()}`);
+  if (!res.ok) throw new Error(`RO search failed (${res.status})`);
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'RO search failed');
+  return data.items || [];
 }
 
 function tmFormatROData(data) {

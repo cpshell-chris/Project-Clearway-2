@@ -13,7 +13,7 @@ window.addEventListener('load', () => {
     if (_overlay) { _overlay.classList.add('hidden'); setTimeout(() => { _overlay.style.display = 'none'; }, 280); }
 
     // ── Tile clicks → open tool on Screen 2 ──
-    document.getElementById('tile-ka') ?.addEventListener('click', () => openTool('ka'));
+    document.getEle!mentById('tile-ka') ?.addEventListener('click', () => openTool('ka'));
     document.getElementById('tile-sw') ?.addEventListener('click', () => openTool('sw'));
     document.getElementById('tile-vca')?.addEventListener('click', () => openTool('vca'));
     document.getElementById('tile-ama')?.addEventListener('click', () => { openTool('ama'); amaShowView('ama-customer-view'); });
@@ -1643,8 +1643,8 @@ let tmLoadedData = null;   // Currently loaded RO data (shared across all tools)
 window.addEventListener('load', initTekMetric);
 
 function initTekMetric() {
-    // Clear loaded RO
-    document.getElementById('tm-clear-btn')?.addEventListener('click', tmClearLoaded);
+    // Search button — open/close inline RO search
+    document.getElementById('tm-search-btn')?.addEventListener('click', tmToggleROSearch);
 
     // Test connection on startup
     tmSetStatus('checking', 'Connecting…');
@@ -1652,6 +1652,15 @@ function initTekMetric() {
 
     // Start monitoring active tab URL for TekMetric RO pages
     startURLMonitoring();
+
+    // Close search dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('tm-ro-search-wrap');
+        if (!wrap?.classList.contains('open')) return;
+        if (!wrap.contains(e.target) && e.target.id !== 'tm-search-btn') {
+            tmCloseROSearch();
+        }
+    });
 }
 
 // ── URL Monitoring ─────────────────────────────────────────────────
@@ -1793,11 +1802,90 @@ function tmPopulateActiveTab() {
 function tmClearLoaded() {
     tmLoadedData = null;
     document.getElementById('tm-banner').classList.remove('active');
-    // Clear vehicle pills across all tools
     ['vca-vehicle-pill','sw-vehicle-pill','ama-vehicle-pill','ka-vehicle-pill'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
     });
+}
+
+// ── RO Search Dropdown ──────────────────────────────────────────────
+let _roSearchDebounce = null;
+
+function tmToggleROSearch() {
+    const wrap = document.getElementById('tm-ro-search-wrap');
+    if (!wrap) return;
+    if (wrap.classList.contains('open')) {
+        tmCloseROSearch();
+    } else {
+        wrap.classList.add('open');
+        const input = document.getElementById('tm-ro-search-input');
+        if (input) {
+            input.value = '';
+            input.focus();
+            tmRunROSearch('');
+        }
+    }
+}
+
+function tmCloseROSearch() {
+    const wrap = document.getElementById('tm-ro-search-wrap');
+    if (wrap) wrap.classList.remove('open');
+    clearTimeout(_roSearchDebounce);
+}
+
+(function initROSearchInput() {
+    // Wire up the input after DOM is ready
+    window.addEventListener('load', () => {
+        const input = document.getElementById('tm-ro-search-input');
+        if (!input) return;
+        input.addEventListener('input', () => {
+            clearTimeout(_roSearchDebounce);
+            _roSearchDebounce = setTimeout(() => tmRunROSearch(input.value), 300);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') tmCloseROSearch();
+        });
+    });
+})();
+
+function tmRunROSearch(query) {
+    const results = document.getElementById('tm-ro-search-results');
+    if (!results) return;
+    results.innerHTML = '<div class="tm-ro-result-loading">Searching…</div>';
+    chrome.runtime.sendMessage(
+        { action: 'asc_searchLiveROs', query: query.trim() },
+        (response) => {
+            if (!response?.success) {
+                results.innerHTML = '<div class="tm-ro-result-empty">Search failed. Try again.</div>';
+                return;
+            }
+            const items = response.data || [];
+            if (items.length === 0) {
+                results.innerHTML = '<div class="tm-ro-result-empty">No open ROs found.</div>';
+                return;
+            }
+            results.innerHTML = items.map(item => {
+                const roLabel = `RO #${item.roNumber || item.id}`;
+                const customer = item.customerName || '';
+                const vehicle = item.vehicle || '';
+                const sub = [customer, vehicle].filter(Boolean).join(' · ');
+                return `<div class="tm-ro-result" data-ro-id="${item.id}">
+                    <span class="tm-ro-result-top">${roLabel}</span>
+                    ${sub ? `<span class="tm-ro-result-sub">${sub}</span>` : ''}
+                </div>`;
+            }).join('');
+            results.querySelectorAll('.tm-ro-result').forEach(el => {
+                el.addEventListener('click', () => {
+                    const roId = el.dataset.roId;
+                    if (roId) {
+                        tmCloseROSearch();
+                        lastRoId = roId;
+                        tmAutoFetchRO(roId);
+                    }
+                });
+            });
+        }
+    );
 }
 
 // ── escapeHTML helper (if not already defined) ─────────────────────
