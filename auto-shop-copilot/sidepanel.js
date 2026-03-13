@@ -193,34 +193,40 @@ function goBackToHub() {
 let teaserLessonIdx = -1;
 
 function initLessonTeaser() {
-    // Pick a random lesson for the teaser (stored so Culture Coach can reuse if desired)
     teaserLessonIdx = Math.floor(Math.random() * MOC_LESSONS.length);
     const lesson = MOC_LESSONS[teaserLessonIdx];
 
     document.getElementById('teaser-lesson-num').textContent = `#${lesson.num} of 60`;
-    document.getElementById('teaser-lesson-intro').textContent =
-        'Before we begin today\u2019s work, I want to share something with you to ponder through the day.';
+    document.getElementById('teaser-lesson-title').textContent = lesson.title;
 
-    // Split body into paragraphs; show first paragraph as snippet
+    // Split body into paragraphs
     const paras = lesson.body.split('\n\n').map(p => p.trim()).filter(Boolean);
-    const snippet = paras[0] || '';
-    const rest    = paras.slice(1);
 
-    document.getElementById('teaser-lesson-snippet').textContent = snippet;
+    // Snippet: first ~140 chars of first paragraph, ending cleanly at a word boundary
+    const full0 = paras[0] || '';
+    const snippetRaw = full0.length > 140
+        ? full0.slice(0, 140).replace(/\s+\S*$/, '') + '\u2026'
+        : full0;
+    document.getElementById('teaser-lesson-snippet').textContent = snippetRaw;
 
+    // Expanded view: short intro label + all paragraphs
     const fullInner = document.getElementById('teaser-lesson-full-inner');
     fullInner.innerHTML = '';
-    rest.forEach(para => {
+    const introLine = document.createElement('span');
+    introLine.className = 'teaser-intro-line';
+    introLine.textContent = 'A thought to carry with you today \u2014';
+    fullInner.appendChild(introLine);
+    paras.forEach(para => {
         const p = document.createElement('p');
         p.textContent = para;
         fullInner.appendChild(p);
     });
 
     // More / collapse toggle
-    const moreBtn  = document.getElementById('teaser-more-btn');
-    const fullDiv  = document.getElementById('teaser-lesson-full');
-    const openBtn  = document.getElementById('teaser-open-btn');
-    let expanded = false;
+    const moreBtn = document.getElementById('teaser-more-btn');
+    const fullDiv = document.getElementById('teaser-lesson-full');
+    const openBtn = document.getElementById('teaser-open-btn');
+    let expanded  = false;
 
     moreBtn.addEventListener('click', () => {
         expanded = !expanded;
@@ -235,7 +241,6 @@ function initLessonTeaser() {
         }
     });
 
-    // "Open Culture Coach" opens MOC and pre-sets the same lesson
     openBtn.addEventListener('click', () => {
         mocOpenWithLesson(teaserLessonIdx);
     });
