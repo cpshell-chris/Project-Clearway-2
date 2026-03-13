@@ -225,6 +225,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .sw-new-btn { background: white; color: #F97316; border: 2px solid #F97316; border-radius: 8px; padding: 11px 20px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; }
 .sw-s3-outline-btn { flex: 1; background: white; color: #EA580C; border: 1.5px solid #FED7AA; border-radius: 8px; padding: 10px 6px; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.18s; white-space: nowrap; }
 .sw-s3-outline-btn:hover { background: #FFF7ED; border-color: #EA580C; }
+.sw-interval-box.visible { display: flex; gap: 12px; }
+.sw-interval-item { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sw-interval-select { width: 100%; padding: 6px 24px 6px 8px; border: 1px solid #FED7AA; border-radius: 6px; font-size: 13px; font-weight: 600; color: #4a5568; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239494A8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center; appearance: none; cursor: pointer; margin-top: 4px; }
+.sw-interval-select:focus { outline: none; border-color: #EA580C; }
+.sw-interval-select.sw-interval-recommended { border-color: #212529; }
+.sw-tip-btn { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; background: #dee2e6; color: #6c757d; font-size: 9px; font-weight: 700; border: none; cursor: pointer; padding: 0; vertical-align: middle; margin-left: 3px; line-height: 1; }
+.sw-tip-btn:hover { background: #adb5bd; color: #212529; }
+.sw-tip-popup { position: fixed; width: 220px; background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px; font-size: 11.5px; line-height: 1.55; color: #212529; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 9999; display: none; }
+.sw-tip-popup.active { display: block; }
+.sw-week-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sw-week-btn { padding: 5px 10px; border: 1px solid #dee2e6; border-radius: 6px; background: white; font-size: 11px; font-weight: 500; color: #6c757d; cursor: pointer; font-family: inherit; transition: border-color 0.15s; }
+.sw-week-btn:hover { border-color: #EA580C; color: #EA580C; }
+.sw-week-label { font-size: 11px; color: #9494A8; text-align: center; flex: 1; }
+.sw-open-full-btn { width: 100%; margin-top: 8px; background: white; border: 1.5px solid #FED7AA; color: #EA580C; border-radius: 8px; padding: 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.18s; }
+.sw-open-full-btn:hover { background: #FFF7ED; border-color: #EA580C; }
 .vca-intro { padding: 16px; border-bottom: 1px solid #f0f0f0; }
 .vca-intro h2 { font-size: 15px; color: #9A3412; margin-bottom: 6px; }
 .vca-intro p { font-size: 12px; color: #6c757d; line-height: 1.5; }
@@ -672,16 +687,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
       <div class="sw-screen active" id="sw-screen-1">
         <div class="sw-interval-box" id="sw-interval-box">
           <div class="sw-interval-item">
-            <span class="sw-interval-label">Interval</span>
-            <span class="sw-interval-value" id="sw-interval-months">&mdash;</span>
+            <span class="sw-interval-label">Months</span>
+            <select class="sw-interval-select" id="sw-interval-months"></select>
           </div>
           <div class="sw-interval-item">
-            <span class="sw-interval-label">Est. Mileage</span>
-            <span class="sw-interval-value" id="sw-interval-mileage">&mdash;</span>
+            <span class="sw-interval-label">Est. Mileage <button class="sw-tip-btn" id="sw-mileage-tip-btn" type="button">?</button></span>
+            <select class="sw-interval-select" id="sw-interval-mileage"></select>
+            <div class="sw-tip-popup" id="sw-mileage-tooltip"></div>
           </div>
         </div>
         <div class="sw-card">
           <div class="sw-section-label">Select Day</div>
+          <div class="sw-week-nav">
+            <button class="sw-week-btn" id="sw-week-prev" type="button">&larr; Week</button>
+            <span class="sw-week-label" id="sw-week-label"></span>
+            <button class="sw-week-btn" id="sw-week-next" type="button">Week &rarr;</button>
+          </div>
           <div class="sw-day-grid" id="sw-day-grid"></div>
           <button class="btn btn-secondary sw-other-date-btn" id="sw-other-date-btn" type="button">Select Other Date</button>
           <input type="date" class="sw-date-picker" id="sw-custom-date" />
@@ -711,6 +732,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
         <div class="sw-nav-btns">
           <button class="btn btn-primary" id="sw-s1-continue" type="button" disabled style="margin-bottom:0;">Continue &rarr;</button>
         </div>
+        <button class="sw-open-full-btn" id="sw-open-scheduler-s1" type="button">Open Full Scheduler</button>
       </div>
       <div class="sw-screen" id="sw-screen-2">
         <div class="sw-card">

@@ -1614,7 +1614,8 @@ function checkTabURL(url) {
     // Extract RO ID from TekMetric URL
     const match = url.match(/\/repair-orders\/(\d+)/);
     const isTekMetric = url.includes('tekmetric.com');
-    
+    const isPaymentPage = /\/repair-orders\/\d+\/(?:[^/?#]+\/)*payments?(?:\/|$)/i.test(url);
+
     if (match) {
         const roId = match[1];
         if (roId !== lastRoId) {
@@ -1624,10 +1625,16 @@ function checkTabURL(url) {
         }
         // Feed into Scheduling Wizard
         swCheckURL(url);
+        // Auto-switch to Scheduling Wizard on payment page (once per RO)
+        if (isPaymentPage && roId !== swLastPaymentRoId) {
+            swLastPaymentRoId = roId;
+            openTool('sw');
+        }
     } else if (!isTekMetric) {
         // Only clear when navigating away from TekMetric entirely
         if (lastRoId !== null) {
             lastRoId = null;
+            swLastPaymentRoId = null;
             tmClearLoaded();
         }
     }
@@ -1740,6 +1747,10 @@ let swSelectedTime = null;
 let swSelectedType = null;
 let swSelectedServices = [];
 let swSelectedColor = 'navy';
+let swWeekOffset = 0;
+let swTargetDate = null;
+let swSelectedMonthInterval = null;
+let swLastPaymentRoId = null;
 
 function initSchedulingWizard() {
     // Navigation
@@ -1808,6 +1819,21 @@ function initSchedulingWizard() {
         });
     });
 
+    // Week navigation
+    document.getElementById('sw-week-prev')?.addEventListener('click', () => {
+        if (!swTargetDate) return;
+        swWeekOffset--;
+        swPopulateDays(swTargetDate);
+    });
+    document.getElementById('sw-week-next')?.addEventListener('click', () => {
+        if (!swTargetDate) return;
+        swWeekOffset++;
+        swPopulateDays(swTargetDate);
+    });
+
+    // Open full scheduler from step 1
+    document.getElementById('sw-open-scheduler-s1')?.addEventListener('click', swOpenScheduler);
+
     // Restore state from storage
     chrome.storage.local.get(['swDate','swTime','swType','swServices'], result => {
         if (result.swDate) swSelectedDate = result.swDate;
@@ -1864,7 +1890,8 @@ function swUpdateSummary() {
     const d = new Date(swSelectedDate);
     document.getElementById('sw-s3-date').textContent = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
     document.getElementById('sw-s3-time').textContent = swSelectedTime || '—';
-    document.getElementById('sw-s3-mileage').textContent = swPmrrData?.estimatedMileage ? `${swPmrrData.estimatedMileage.toLocaleString()} mi` : '—';
+    const projMi = swGetProjectedMileage(swSelectedMonthInterval || swPmrrData?.recommendedInterval || 6);
+    document.getElementById('sw-s3-mileage').textContent = projMi ? `${projMi.toLocaleString()} mi` : '—';
     document.getElementById('sw-s3-type').textContent = swSelectedType === 'dropoff' ? 'Drop-Off' : 'Wait';
     const box = document.getElementById('sw-s3-services');
     box.innerHTML = swSelectedServices.length === 0
@@ -1874,13 +1901,24 @@ function swUpdateSummary() {
 
 function swPopulateDays(startDate) {
     const grid = document.getElementById('sw-day-grid');
-    if (grid.querySelector('.sw-day-card')) return;
-    grid.innerHTML = '';
+    if (!grid) return;
+    grid.innerHTML = ''; // always rebuild so week offset and selection apply
 
-    const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dayNames = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // Find the Monday of the week containing startDate, then apply offset
     let cur = new Date(startDate);
+    cur.setDate(cur.getDate() + (swWeekOffset * 7));
     while (cur.getDay() !== 1) cur.setDate(cur.getDate() + 1);
+
+    // Update week label
+    const weekEnd = new Date(cur); weekEnd.setDate(weekEnd.getDate() + 4);
+    const weekLabel = document.getElementById('sw-week-label');
+    if (weekLabel) {
+        const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        weekLabel.textContent = `${fmt(cur)} – ${fmt(weekEnd)}`;
+    }
 
     for (let i = 0; i < 5; i++) {
         const d = new Date(cur); d.setDate(d.getDate() + i);
@@ -1889,7 +1927,10 @@ function swPopulateDays(startDate) {
         const card = document.createElement('div');
         card.className = 'sw-day-card';
         card.dataset.fullDate = d.toISOString();
-        card.innerHTML = `<div class="sw-day-name">${days[d.getDay()]}</div><div class="sw-day-date">${d.getDate()}</div><div class="sw-day-month">${months[d.getMonth()]}</div><div class="sw-day-appts">${count} appts</div>`;
+        if (swSelectedDate && new Date(swSelectedDate).toISOString().split('T')[0] === key) {
+            card.classList.add('selected');
+        }
+        card.innerHTML = `<div class="sw-day-name">${dayNames[d.getDay()]}</div><div class="sw-day-date">${d.getDate()}</div><div class="sw-day-month">${monthNames[d.getMonth()]}</div><div class="sw-day-appts">${count} appts</div>`;
         card.addEventListener('click', function(e) {
             e.preventDefault();
             document.querySelectorAll('.sw-day-card').forEach(c => c.classList.remove('selected'));
@@ -1953,9 +1994,11 @@ function swPopulateServices(force) {
     swServicesRendered = true;
 
     repeatList.innerHTML = '';
-    const declined = (swRoData?.jobs || []).filter(j =>
-        j.status === 'DECLINED' || j.status === 'Declined' || j.jobStatus === 'DECLINED'
-    );
+    const declined = (swRoData?.jobs || []).filter(j => {
+        const s = String(j?.authorizationStatus || j?.authorizedStatus || j?.approvalStatus || j?.appointmentStatus || j?.jobStatus || j?.status || '').trim().toUpperCase();
+        if (j?.authorized === false || j?.declined === true || j?.isDeclined === true) return true;
+        return s.includes('DECLIN') || s.includes('REJECT') || s.includes('UNAUTH');
+    });
     if (declined.length === 0) {
         repeatList.innerHTML = '<p style="font-size:12px;color:#6c757d;padding:8px 0;">No declined services</p>';
     } else {
@@ -2066,15 +2109,146 @@ function swDisplayRO() {
     text.textContent = `RO #${swRoData.roNumber} · ${name} · ${vehicle}`;
     banner.classList.add('active');
 
-    const box = document.getElementById('sw-interval-box');
-    document.getElementById('sw-interval-months').textContent = `${swPmrrData.recommendedInterval} months`;
-    document.getElementById('sw-interval-mileage').textContent = `${swPmrrData.estimatedMileage.toLocaleString()} mi`;
-    box.classList.add('visible');
+    const recommended = swPmrrData.recommendedInterval || 6;
+    if (!swSelectedMonthInterval) swSelectedMonthInterval = recommended;
+
+    // Populate month select
+    const monthSel = document.getElementById('sw-interval-months');
+    if (monthSel) {
+        monthSel.innerHTML = '';
+        for (let m = 1; m <= 12; m++) {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m === 1 ? '1 month' : `${m} months`;
+            if (m === swSelectedMonthInterval) opt.selected = true;
+            monthSel.appendChild(opt);
+        }
+        monthSel.classList.toggle('sw-interval-recommended', swSelectedMonthInterval === recommended);
+        monthSel.onchange = function() {
+            swSelectedMonthInterval = Number(this.value);
+            this.classList.toggle('sw-interval-recommended', swSelectedMonthInterval === recommended);
+            swWeekOffset = 0;
+            swSelectedDate = null;
+            swUpdateMileageSelect();
+            swUpdateTooltip();
+            swUpdateTargetDate();
+        };
+    }
+
+    swUpdateMileageSelect();
+    swUpdateTooltip();
+    document.getElementById('sw-interval-box').classList.add('visible');
+    swWireMileageTooltip();
+}
+
+function swGetProjectedMileage(months) {
+    const cur = swRoData?.mileage || 0;
+    const avg = swVehicleHistory?.avgMilesPerDay;
+    if (!Number.isFinite(avg) || avg <= 0) return cur + months * 1000;
+    return Math.round(cur + avg * months * 30.4375);
+}
+
+function swGetConfidenceLevel() {
+    const c = swVehicleHistory?.dataPointCount || 0;
+    const s = swVehicleHistory?.historySpanDays || 0;
+    if (!c || c < 2 || !s) return { label: 'Low', tone: 'low' };
+    if (c >= 5 && s >= 365) return { label: 'High', tone: 'high' };
+    if (c >= 3 && s >= 180) return { label: 'Medium', tone: 'medium' };
+    return { label: 'Low', tone: 'low' };
+}
+
+function swUpdateMileageSelect() {
+    const mileageSel = document.getElementById('sw-interval-mileage');
+    if (!mileageSel) return;
+    const avg = swVehicleHistory?.avgMilesPerDay;
+    const cur = swSelectedMonthInterval || swPmrrData?.recommendedInterval || 6;
+    mileageSel.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+        const mi = (Number.isFinite(avg) && avg > 0) ? Math.round(avg * m * 30.4375) : m * 1000;
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = mi.toLocaleString() + ' mi';
+        if (m === cur) opt.selected = true;
+        mileageSel.appendChild(opt);
+    }
+    mileageSel.onchange = function() {
+        swSelectedMonthInterval = Number(this.value);
+        swWeekOffset = 0;
+        swSelectedDate = null;
+        const monthSel = document.getElementById('sw-interval-months');
+        if (monthSel) {
+            monthSel.value = swSelectedMonthInterval;
+            monthSel.classList.toggle('sw-interval-recommended', swSelectedMonthInterval === (swPmrrData?.recommendedInterval || 6));
+        }
+        swUpdateTooltip();
+        swUpdateTargetDate();
+    };
+}
+
+function swUpdateTooltip() {
+    const tip = document.getElementById('sw-mileage-tooltip');
+    if (!tip || !swRoData) return;
+    const months = swSelectedMonthInterval || swPmrrData?.recommendedInterval || 6;
+    const currentMileage = swRoData.mileage || 0;
+    const avg = swVehicleHistory?.avgMilesPerDay;
+    const cf = swGetConfidenceLevel();
+    const confColor = cf.tone === 'high' ? '#16A34A' : cf.tone === 'medium' ? '#D97706' : '#DC2626';
+
+    if (!Number.isFinite(avg) || avg <= 0) {
+        const projected = currentMileage + months * 1000;
+        tip.innerHTML = `<div style="font-size:10px;font-weight:700;color:#4a5568;margin-bottom:6px;">Estimated (Default)</div><div style="font-size:11px;color:#6c757d;line-height:1.6;">Current: ${currentMileage.toLocaleString()} mi<br>Default: 1,000 mi/month<br>Months: ${months}<br><br>Increase: +${(months * 1000).toLocaleString()}<br><strong>Projected: ${projected.toLocaleString()} mi</strong></div>`;
+    } else {
+        const mpm = avg * 30.4375;
+        const increase = Math.round(mpm * months);
+        const projected = currentMileage + increase;
+        const spanMonths = swVehicleHistory?.historySpanDays ? Math.round(swVehicleHistory.historySpanDays / 30) : null;
+        const dp = swVehicleHistory?.dataPointCount || 0;
+        tip.innerHTML = `<div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;"><div style="width:6px;height:6px;border-radius:50%;background:${confColor};flex-shrink:0;"></div><span style="font-size:11px;font-weight:700;color:#4a5568;">${cf.label} Confidence</span></div><hr style="border:none;border-top:1px solid #f0f0f0;margin:4px 0 6px;"><div style="font-size:11px;color:#6c757d;line-height:1.6;">${dp} data points · ${spanMonths || '—'} months history<br><br>Current: ${currentMileage.toLocaleString()} mi<br>Avg: ${avg.toFixed(1)} mi/day · ${Math.round(mpm).toLocaleString()} mi/month<br>Months: ${months}<br><br>Increase: +${increase.toLocaleString()}<br><strong>Projected: ${projected.toLocaleString()} mi</strong></div>`;
+    }
+}
+
+function swWireMileageTooltip() {
+    const btn = document.getElementById('sw-mileage-tip-btn');
+    const tip = document.getElementById('sw-mileage-tooltip');
+    if (!btn || !tip || btn.dataset.wired === '1') return;
+    btn.dataset.wired = '1';
+
+    function positionTip() {
+        const r = btn.getBoundingClientRect();
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let top = r.bottom + 6;
+        if (top + 170 + 8 > vh) top = r.top - 170 - 6;
+        top = Math.max(8, Math.min(top, vh - 170 - 8));
+        let left = r.right - 220;
+        left = Math.max(8, Math.min(left, vw - 220 - 8));
+        tip.style.top = top + 'px';
+        tip.style.left = left + 'px';
+    }
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = tip.classList.toggle('active');
+        if (open) positionTip();
+    });
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !tip.contains(e.target)) tip.classList.remove('active');
+    });
+}
+
+function swUpdateTargetDate() {
+    const months = swSelectedMonthInterval || swPmrrData?.recommendedInterval || 6;
+    const target = new Date();
+    target.setMonth(target.getMonth() + months);
+    swTargetDate = target;
+    swPopulateDays(target);
 }
 
 async function swLoadScheduleData() {
     const months = swPmrrData?.recommendedInterval || 6;
+    if (!swSelectedMonthInterval) swSelectedMonthInterval = months;
     const target = new Date(); target.setMonth(target.getMonth() + months);
+    swTargetDate = target;
+    swWeekOffset = 0;
     const start = new Date(target); start.setDate(start.getDate() - 7);
     const end = new Date(target); end.setDate(end.getDate() + 14);
 
@@ -2107,7 +2281,7 @@ async function swConfirmAppointment() {
         title: `Scheduling Wizard - ${custName} - ${vehicle}`,
         description: swSelectedServices.length > 0 ? swSelectedServices.join(', ') : 'Routine maintenance',
         startTime: startDT.toISOString(), endTime: endDT.toISOString(),
-        mileage: swPmrrData?.estimatedMileage || (swRoData.mileage + 6000),
+        mileage: swGetProjectedMileage(swSelectedMonthInterval || swPmrrData?.recommendedInterval || 6),
         appointmentType: swSelectedType, color: swSelectedColor
     };
 
@@ -2161,9 +2335,14 @@ function swCopySummary() {
 
 function swOpenScheduler(e) {
     if (e) e.preventDefault();
-    if (!swSelectedDate) { alert('Please select a date first.'); return; }
-    const url = `https://sandbox.tekmetric.com/admin/shop/${ASC_SHOP_ID}/appointments?view=day&dayViewResource=DEFAULT&date=${encodeURIComponent(new Date(swSelectedDate).toISOString())}`;
-    chrome.tabs.create({ url });
+    const shopId = swRoData?.shopId || ASC_SHOP_ID;
+    const dateToUse = swSelectedDate ? new Date(swSelectedDate) : (swTargetDate || new Date());
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        const tabUrl = tabs[0]?.url || '';
+        const baseUrl = tabUrl.includes('sandbox.tekmetric.com') ? 'https://sandbox.tekmetric.com' : 'https://shop.tekmetric.com';
+        const url = `${baseUrl}/admin/shop/${shopId}/appointments?view=day&dayViewResource=DEFAULT&date=${encodeURIComponent(dateToUse.toISOString())}`;
+        chrome.tabs.create({ url });
+    });
 }
 
 function swClearAndRestart() {
@@ -2190,9 +2369,12 @@ function swClearAndRestart() {
     document.getElementById('sw-step1-summary').style.display = 'none';
     const confirmBtn = document.getElementById('sw-s3-confirm');
     if (confirmBtn) { confirmBtn.textContent = 'Confirm Appointment'; confirmBtn.style.background = ''; confirmBtn.disabled = false; }
-    // Reset load lock so a new RO can be loaded after restart
+    // Reset load lock and state so a new RO can be loaded after restart
     swLoadingRoId = null;
     swServicesRendered = false;
+    swWeekOffset = 0;
+    swSelectedMonthInterval = null;
+    swLastPaymentRoId = null;
     swGoToStep(1);
 }
 

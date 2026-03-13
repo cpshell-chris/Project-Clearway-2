@@ -9,6 +9,35 @@ chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ windowId: tab.windowId });
 });
 
+// Auto-open side panel on TekMetric payment pages
+const ASC_PAYMENT_URL_RE = /\/repair-orders\/\d+\/(?:[^/?#]+\/)*payments?(?:\/|$)/i;
+
+chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+  if (details.frameId !== 0) return;
+  if (!ASC_PAYMENT_URL_RE.test(details.url)) return;
+  try {
+    await Promise.all([
+      chrome.sidePanel.open({ tabId: details.tabId }),
+      chrome.sidePanel.setOptions({ tabId: details.tabId, path: 'sidepanel.html', enabled: true }),
+    ]);
+  } catch (err) {
+    console.log('[ASC] Auto-open (historyState) failed:', err.message);
+  }
+});
+
+chrome.webNavigation.onCommitted.addListener(async (details) => {
+  if (details.frameId !== 0) return;
+  if (!ASC_PAYMENT_URL_RE.test(details.url)) return;
+  try {
+    await Promise.all([
+      chrome.sidePanel.open({ tabId: details.tabId }),
+      chrome.sidePanel.setOptions({ tabId: details.tabId, path: 'sidepanel.html', enabled: true }),
+    ]);
+  } catch (err) {
+    console.log('[ASC] Auto-open (committed) failed:', err.message);
+  }
+});
+
 // Listen for messages from the side panel AND content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
