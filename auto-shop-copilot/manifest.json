@@ -7,8 +7,7 @@
     "storage",
     "sidePanel",
     "tabs",
-    "activeTab",
-    "webNavigation"
+    "activeTab"
   ],
   "host_permissions": [
     "https://api.anthropic.com/*",
