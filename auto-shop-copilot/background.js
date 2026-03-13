@@ -992,7 +992,7 @@ async function performClaudeCall(systemPrompt, messages) {
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || 'AI request failed');
+    throw new Error(err.message || err.error || `AI request failed (${response.status})`);
   }
   const data = await response.json();
   if (!data.success) throw new Error(data.message || 'AI request failed');

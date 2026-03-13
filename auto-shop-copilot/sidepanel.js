@@ -293,6 +293,8 @@ function kaReset() {
     if (resultCard) resultCard.style.display = 'none';
     const suggestions = document.getElementById('ka-suggestions');
     if (suggestions) suggestions.style.display = 'block';
+    const errorMsg = document.getElementById('ka-error-msg');
+    if (errorMsg) errorMsg.style.display = 'none';
     kaShowScreen('ka-screen-1');
 }
 
@@ -328,10 +330,15 @@ ${'─'.repeat(48)}`;
 async function searchKnowledge() {
     const query     = document.getElementById('knowledge-input').value.trim();
     const loading   = document.getElementById('ka-loading');
+    const errorMsg  = document.getElementById('ka-error-msg');
     const searchBtn = document.getElementById('knowledge-search-btn');
 
-    if (!query) { alert('Please enter a part, service, or question.'); return; }
+    if (!query) {
+        if (errorMsg) { errorMsg.textContent = 'Please enter a part, service, or question.'; errorMsg.style.display = 'block'; }
+        return;
+    }
 
+    if (errorMsg) errorMsg.style.display = 'none';
     if (loading)   loading.classList.add('active');
     if (searchBtn) searchBtn.disabled = true;
 
@@ -355,7 +362,8 @@ async function searchKnowledge() {
             if (searchBtn) searchBtn.disabled = false;
 
             if (chrome.runtime.lastError || !response?.success) {
-                alert(response?.error || chrome.runtime.lastError?.message || 'Search failed. Please try again.');
+                const msg = response?.error || chrome.runtime.lastError?.message || 'Search failed. Please try again.';
+                if (errorMsg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
                 return;
             }
 
