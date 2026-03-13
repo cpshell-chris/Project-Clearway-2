@@ -21,8 +21,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .tm-banner { display: none; align-items: center; justify-content: space-between; padding: 4px 16px; background: #fdf8f5; border-top: 1px solid #e8d5c4; flex-shrink: 0; }
 .tm-banner.active { display: flex; }
 .tm-banner-text { font-size: 11px; color: #8a6a58; font-weight: 500; letter-spacing: 0.1px; }
-.tm-search-btn { background: none; border: none; font-size: 13px; color: #b8a099; cursor: pointer; padding: 2px 5px; line-height: 1; transition: color 0.15s; }
-.tm-search-btn:hover { color: #EA580C; }
+.tm-search-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); color: white; border-radius: 8px; cursor: pointer; transition: background 0.2s; padding: 6px 10px; font-size: 15px; display: flex; align-items: center; }
+.tm-search-btn:hover { background: rgba(255,255,255,0.28); }
 .tm-ro-search-wrap { display: none; flex-direction: column; background: white; border-bottom: 1px solid #e8d5c4; flex-shrink: 0; }
 .tm-ro-search-wrap.open { display: flex; }
 .tm-ro-search-input { border: none; border-bottom: 1px solid #f0e4d8; padding: 8px 14px; font-size: 12px; font-family: inherit; outline: none; color: #3a3a3a; background: #fffbf8; }
@@ -468,6 +468,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
       </div>
       <div class="hub-header-btns">
         <button class="hub-hiw-btn" id="hub-hiw-btn" type="button">How it works?</button>
+        <button class="tm-search-btn" id="tm-search-btn" type="button" title="Search open repair orders">&#x1F50D;</button>
         <button class="hub-gear-btn" id="hub-gear-btn" type="button" title="Settings">&#9881;</button>
       </div>
     </div>
@@ -475,7 +476,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 
   <div class="tm-banner" id="tm-banner">
     <span class="tm-banner-text" id="tm-banner-text">RO loaded</span>
-    <button class="tm-search-btn" id="tm-search-btn" type="button" title="Search open repair orders">&#x1F50D;</button>
   </div>
   <div class="tm-ro-search-wrap" id="tm-ro-search-wrap">
     <input class="tm-ro-search-input" id="tm-ro-search-input" type="text" placeholder="Search by RO#, name, or vehicle…" autocomplete="off" />
