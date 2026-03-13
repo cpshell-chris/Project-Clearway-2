@@ -13,7 +13,7 @@ window.addEventListener('load', () => {
     if (_overlay) { _overlay.classList.add('hidden'); setTimeout(() => { _overlay.style.display = 'none'; }, 280); }
 
     // ── Tile clicks → open tool on Screen 2 ──
-    document.getEle!mentById('tile-ka') ?.addEventListener('click', () => openTool('ka'));
+    document.getElementById('tile-ka') ?.addEventListener('click', () => openTool('ka'));
     document.getElementById('tile-sw') ?.addEventListener('click', () => openTool('sw'));
     document.getElementById('tile-vca')?.addEventListener('click', () => openTool('vca'));
     document.getElementById('tile-ama')?.addEventListener('click', () => { openTool('ama'); amaShowView('ama-customer-view'); });
