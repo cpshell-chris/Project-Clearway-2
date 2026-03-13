@@ -1062,7 +1062,7 @@ function tmFormatROData(data) {
   const engine       = vehicle.engine       || '';
   const phone        = customer.phone       || customer.phoneNumber || 'N/A';
   const email        = customer.email       || 'N/A';
-  const roNum        = ro.repairOrderNumber || ro.id || 'N/A';
+  const roNum        = ro.repairOrderNumber || ro.roNumber || ro.id || ro.roId || 'N/A';
   const roDate       = ro.createdDate       || ro.postedDate || 'Today';
   const advisor      = ro.serviceAdvisor    ? `${ro.serviceAdvisor.firstName || ''} ${ro.serviceAdvisor.lastName || ''}`.trim() : 'N/A';
   const status       = ro.repairOrderStatus || ro.status || 'N/A';
