@@ -1,6 +1,9 @@
 // Auto Shop Copilot — sidepanel.js
 // Merged from Service Advisor Hub v3.16.6 and Admin Hub v1.5
 
+const ASC_CLOUD_RUN_URL = 'https://advance-appointment-service-361478515851.us-east4.run.app';
+const ASC_SHOP_ID = '238';
+
 // ==================== INITIALIZATION ====================
 
 window.addEventListener('load', () => {
@@ -58,62 +61,10 @@ window.addEventListener('load', () => {
 
     // ── Hub Gear → Settings Modal ──
     document.getElementById('hub-gear-btn')?.addEventListener('click', () => {
-        chrome.storage.local.get(['apiKey', 'tmCredentials'], (result) => {
-            if (result.apiKey) document.getElementById('hub-api-key-input').value = result.apiKey;
-            if (result.tmCredentials) {
-                document.getElementById('hub-tm-cloudrun-input').value = result.tmCredentials.cloudRunUrl || '';
-                document.getElementById('hub-tm-shopid-input').value   = result.tmCredentials.shopId      || '';
-            }
-        });
         document.getElementById('hub-settings-modal').classList.add('active');
     });
     document.getElementById('hub-modal-close')?.addEventListener('click', () => {
         document.getElementById('hub-settings-modal').classList.remove('active');
-    });
-
-    // Hub modal — Save API key
-    document.getElementById('hub-save-api-btn')?.addEventListener('click', () => {
-        const key = document.getElementById('hub-api-key-input').value.trim();
-        const msg = document.getElementById('hub-api-save-msg');
-        if (!key || !key.startsWith('sk-ant-')) {
-            msg.innerHTML = '<div class="error-message"><p>Invalid key format. Must start with sk-ant-</p></div>';
-            return;
-        }
-        chrome.storage.local.set({ apiKey: key }, () => {
-            msg.innerHTML = '<div class="success-message">API key saved.</div>';
-            setTimeout(() => { msg.innerHTML = ''; }, 2500);
-        });
-    });
-
-    // Hub modal — Save & Test TekMetric
-    document.getElementById('hub-tm-save-btn')?.addEventListener('click', () => {
-        const creds = {
-            cloudRunUrl: document.getElementById('hub-tm-cloudrun-input').value.trim().replace(/\/$/, ''),
-            shopId:      document.getElementById('hub-tm-shopid-input').value.trim()
-        };
-        const msg = document.getElementById('hub-tm-save-msg');
-        if (!creds.cloudRunUrl) {
-            msg.innerHTML = '<div class="error-message"><p>Please enter your Cloud Run URL.</p></div>';
-            return;
-        }
-        msg.innerHTML = '<div style="color:#6c757d;font-size:11px;">Testing connection…</div>';
-        chrome.runtime.sendMessage({ action: 'asc_tmTestConnection', credentials: creds }, response => {
-            if (response?.success) {
-                chrome.storage.local.set({ tmCredentials: creds });
-                tmCredentials = creds;
-                tmSetStatus('connected', `Connected · Shop ${creds.shopId}`);
-                msg.innerHTML = '<div class="success-message">TekMetric connected.</div>';
-                setTimeout(() => { msg.innerHTML = ''; }, 2500);
-            } else {
-                msg.innerHTML = `<div class="error-message"><p>${response?.error || 'Connection failed'}</p></div>`;
-                tmSetStatus('error', 'Connection failed');
-            }
-        });
-    });
-
-    // ── API key load (silent) ──
-    chrome.storage.local.get(['apiKey'], (result) => {
-        if (result.apiKey) console.log('API key loaded from storage.');
     });
 
     // ── Knowledge Assistant ──
@@ -226,15 +177,6 @@ function openTool(toolKey) {
 function goBackToHub() {
     document.getElementById('screen-tool').classList.remove('active');
     document.getElementById('screen-hub').classList.add('active');
-}
-
-// ==================== API KEY MANAGEMENT ====================
-// API key is now managed through the Hub Settings modal (gear icon in header)
-
-function getApiKey(callback) {
-    chrome.storage.local.get(['apiKey'], (result) => {
-        callback(result.apiKey || null);
-    });
 }
 
 // ==================== KNOWLEDGE ASSISTANT v2.1 ====================
@@ -390,45 +332,38 @@ async function searchKnowledge() {
 
     if (!query) { alert('Please enter a part, service, or question.'); return; }
 
-    chrome.storage.local.get(['apiKey'], async (storage) => {
-        if (!storage.apiKey) {
-            alert('No API key found. Open Settings to add your key.');
-            return;
-        }
+    if (loading)   loading.classList.add('active');
+    if (searchBtn) searchBtn.disabled = true;
 
-        if (loading)   loading.classList.add('active');
-        if (searchBtn) searchBtn.disabled = true;
+    // Build vehicle context from loaded RO if available — pass full data
+    let vehicleContext = null;
+    if (tmLoadedData) {
+        const s = tmLoadedData.summary;
+        vehicleContext = {
+            vehicle:     s.vehicle,
+            odometer:    s.odometer,
+            roNumber:    s.roNumber,
+            fullROData:  tmLoadedData.formatted || '',   // full RO including all technician notes
+            historyNote: buildHistoryNote(query, tmLoadedData.formatted || '')
+        };
+    }
 
-        // Build vehicle context from loaded RO if available — pass full data
-        let vehicleContext = null;
-        if (tmLoadedData) {
-            const s = tmLoadedData.summary;
-            vehicleContext = {
-                vehicle:     s.vehicle,
-                odometer:    s.odometer,
-                roNumber:    s.roNumber,
-                fullROData:  tmLoadedData.formatted || '',   // full RO including all technician notes
-                historyNote: buildHistoryNote(query, tmLoadedData.formatted || '')
-            };
-        }
+    chrome.runtime.sendMessage(
+        { action: 'asc_searchKnowledge', query, vehicleContext },
+        (response) => {
+            if (loading)   loading.classList.remove('active');
+            if (searchBtn) searchBtn.disabled = false;
 
-        chrome.runtime.sendMessage(
-            { action: 'asc_searchKnowledge', query, apiKey: storage.apiKey, vehicleContext },
-            (response) => {
-                if (loading)   loading.classList.remove('active');
-                if (searchBtn) searchBtn.disabled = false;
-
-                if (chrome.runtime.lastError || !response?.success) {
-                    alert(response?.error || chrome.runtime.lastError?.message || 'Search failed. Please try again.');
-                    return;
-                }
-
-                kaCurrentReport = response.data;
-                kaPopulate(response.data);
-                kaShowScreen('ka-screen-1');   // stay on screen 1, result card appears inline
+            if (chrome.runtime.lastError || !response?.success) {
+                alert(response?.error || chrome.runtime.lastError?.message || 'Search failed. Please try again.');
+                return;
             }
-        );
-    });
+
+            kaCurrentReport = response.data;
+            kaPopulate(response.data);
+            kaShowScreen('ka-screen-1');   // stay on screen 1, result card appears inline
+        }
+    );
 }
 
 // Scan the formatted RO text for any mention of the searched service
@@ -461,45 +396,22 @@ async function generateVCA(type) {
         return;
     }
 
-    chrome.storage.local.get(['apiKey'], async (storage) => {
-        const apiKey = storage.apiKey;
-        
-        if (!apiKey) {
-            const resultText = document.getElementById('vca-result-text');
-            const result     = document.getElementById('vca-result');
-            if (resultText) resultText.textContent = 'API key required. Open Settings to add your Claude API key.';
-            if (result) result.classList.add('active');
-            return;
-        }
+    loading.classList.add('active');
+    result.classList.remove('active');
 
-        loading.classList.add('active');
-        result.classList.remove('active');
-
-        try {
-            chrome.runtime.sendMessage(
-                { action: 'asc_generateVCA', input: input, type: type, apiKey: apiKey },
-                (response) => {
-                    if (chrome.runtime.lastError) {
-                        throw new Error(chrome.runtime.lastError.message);
-                    }
-                    
-                    if (response && response.success) {
-                        displayVCAResults(response.data, type);
-                    } else {
-                        throw new Error(response?.error || 'Unknown error');
-                    }
-                    
-                    loading.classList.remove('active');
-                }
-            );
-        } catch (error) {
+    chrome.runtime.sendMessage(
+        { action: 'asc_generateVCA', input: input, type: type },
+        (response) => {
             loading.classList.remove('active');
-            const result = document.getElementById('vca-result');
-            const resultText = document.getElementById('vca-result-text');
-            if (resultText) resultText.textContent = `Error: ${error.message}`;
-            if (result) result.classList.add('active');
+            if (chrome.runtime.lastError || !response?.success) {
+                const resultText = document.getElementById('vca-result-text');
+                if (resultText) resultText.textContent = `Error: ${response?.error || chrome.runtime.lastError?.message || 'Unknown error'}`;
+                result.classList.add('active');
+                return;
+            }
+            displayVCAResults(response.data, type);
         }
-    });
+    );
 }
 
 function displayVCAResults(content, type) {
@@ -972,19 +884,14 @@ function sodDisplayMarketing(content) {
 // ── API Helper ─────────────────────────────────────────────────────
 async function sodCallAPI(systemPrompt, messages) {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get(['apiKey'], async (result) => {
-            const apiKey = result.apiKey;
-            if (!apiKey) { reject(new Error('No API key')); return; }
-
-            chrome.runtime.sendMessage(
-                { action: 'asc_sodCall', systemPrompt, messages, apiKey },
-                (response) => {
-                    if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-                    if (response?.success) resolve(response.data);
-                    else reject(new Error(response?.error || 'Unknown error'));
-                }
-            );
-        });
+        chrome.runtime.sendMessage(
+            { action: 'asc_sodCall', systemPrompt, messages },
+            (response) => {
+                if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
+                if (response?.success) resolve(response.data);
+                else reject(new Error(response?.error || 'Unknown error'));
+            }
+        );
     });
 }
 
@@ -1466,21 +1373,17 @@ function amaCopyFlash(btnId) {
     setTimeout(() => { btn.textContent = orig; }, 2000);
 }
 
-// ── API call (reuses apiKey storage key shared by all SA Hub tools) ──
+// ── API call ──
 async function amaCallAPI(systemPrompt, messages) {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get(['apiKey'], (result) => {
-            const apiKey = result.apiKey;
-            if (!apiKey) { reject(new Error('No API key — open Settings to configure')); return; }
-            chrome.runtime.sendMessage(
-                { action: 'asc_amaCall', systemPrompt, messages, apiKey },
-                (response) => {
-                    if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-                    if (response?.success) resolve(response.data);
-                    else reject(new Error(response?.error || 'Unknown error'));
-                }
-            );
-        });
+        chrome.runtime.sendMessage(
+            { action: 'asc_amaCall', systemPrompt, messages },
+            (response) => {
+                if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
+                if (response?.success) resolve(response.data);
+                else reject(new Error(response?.error || 'Unknown error'));
+            }
+        );
     });
 }
 
@@ -1659,7 +1562,6 @@ We deliver dealership-level expertise and equipment at an independent shop price
 // ==================== TEKMETRIC INTEGRATION ====================
 
 // ── State ──────────────────────────────────────────────────────────
-let tmCredentials = null;
 let tmLoadedData = null;   // Currently loaded RO data (shared across all tools)
 
 // ── Init ───────────────────────────────────────────────────────────
@@ -1669,14 +1571,9 @@ function initTekMetric() {
     // Clear loaded RO
     document.getElementById('tm-clear-btn')?.addEventListener('click', tmClearLoaded);
 
-    // Load saved credentials
-    chrome.storage.local.get(['tmCredentials'], result => {
-        if (result.tmCredentials) {
-            tmCredentials = result.tmCredentials;
-            tmSetStatus('checking', 'Connecting…');
-            tmTestConnection();
-        }
-    });
+    // Test connection on startup
+    tmSetStatus('checking', 'Connecting…');
+    tmTestConnection();
 
     // Start monitoring active tab URL for TekMetric RO pages
     startURLMonitoring();
@@ -1714,8 +1611,6 @@ function checkCurrentTab() {
 }
 
 function checkTabURL(url) {
-    if (!tmCredentials) return;
-    
     // Extract RO ID from TekMetric URL
     const match = url.match(/\/repair-orders\/(\d+)/);
     const isTekMetric = url.includes('tekmetric.com');
@@ -1741,9 +1636,9 @@ function checkTabURL(url) {
 
 async function tmAutoFetchRO(roId) {
     console.log('[ASC] Auto-fetching RO:', roId);
-    
+
     chrome.runtime.sendMessage(
-        { action: 'asc_tmGetRO', roNumber: roId, credentials: tmCredentials },
+        { action: 'asc_tmGetRO', roNumber: roId },
         response => {
             if (response?.success) {
                 tmLoadRO(response.data);
@@ -1764,66 +1659,14 @@ function tmSetStatus(state, text) {
     span.textContent = text;
 }
 
-// ── Settings modal ─────────────────────────────────────────────────
-function tmOpenSettings() {
-    if (tmCredentials) {
-        document.getElementById('tm-cloudrun-input').value = tmCredentials.cloudRunUrl || '';
-        document.getElementById('tm-shopid-input').value   = tmCredentials.shopId      || '';
-    }
-    document.getElementById('tm-modal').classList.add('active');
-}
-
-function tmCloseModal() {
-    document.getElementById('tm-modal').classList.remove('active');
-    document.getElementById('tm-modal-msg').innerHTML = '';
-}
-
-async function tmSaveAndTest() {
-    const creds = {
-        cloudRunUrl: document.getElementById('tm-cloudrun-input').value.trim(),
-        shopId:      document.getElementById('tm-shopid-input').value.trim()
-    };
-
-    if (!creds.cloudRunUrl) {
-        document.getElementById('tm-modal-msg').innerHTML =
-            '<div class="error-message"><p>Please enter your Cloud Run URL.</p></div>';
-        return;
-    }
-
-    // Remove trailing slash if present
-    creds.cloudRunUrl = creds.cloudRunUrl.replace(/\/$/, '');
-
-    document.getElementById('tm-modal-msg').innerHTML =
-        '<div style="color:#6c757d;font-size:11px;text-align:center;">Testing connection…</div>';
-
-    chrome.runtime.sendMessage(
-        { action: 'asc_tmTestConnection', credentials: creds },
-        response => {
-            if (response?.success) {
-                chrome.storage.local.set({ tmCredentials: creds });
-                tmCredentials = creds;
-                tmSetStatus('connected', `Connected · Shop ${creds.shopId}`);
-                document.getElementById('tm-modal-msg').innerHTML =
-                    '<div class="success-message">Connected successfully.</div>';
-                setTimeout(tmCloseModal, 1500);
-            } else {
-                document.getElementById('tm-modal-msg').innerHTML =
-                    `<div class="error-message"><p>${response?.error || 'Connection failed'}</p></div>`;
-                tmSetStatus('error', 'Connection failed');
-            }
-        }
-    );
-}
-
 function tmTestConnection() {
-    if (!tmCredentials) return;
     chrome.runtime.sendMessage(
-        { action: 'asc_tmTestConnection', credentials: tmCredentials },
+        { action: 'asc_tmTestConnection' },
         response => {
             if (response?.success) {
                 tmSetStatus('connected', `Connected · ${response.data.shopName}`);
             } else {
-                tmSetStatus('error', 'Check credentials');
+                tmSetStatus('error', 'Connection error');
             }
         }
     );
@@ -1966,7 +1809,7 @@ function initSchedulingWizard() {
     });
 
     // Restore state from storage
-    chrome.storage.local.get(['swDate','swTime','swType','swServices','tmCredentials'], result => {
+    chrome.storage.local.get(['swDate','swTime','swType','swServices'], result => {
         if (result.swDate) swSelectedDate = result.swDate;
         if (result.swTime) swSelectedTime = result.swTime;
         if (result.swType) swSelectedType = result.swType;
@@ -2184,42 +2027,35 @@ async function swLoadRO(roId) {
     if (swLoadingRoId === roId) return;
 
     swLoadingRoId = roId;
+    swServicesRendered = false; // Reset so services re-render for new RO
 
-    chrome.storage.local.get(['tmCredentials','apiKey'], async result => {
-        const creds = result.tmCredentials;
-        const apiKey = result.apiKey;
-        if (!creds?.cloudRunUrl || !apiKey) { swLoadingRoId = null; return; }
+    try {
+        const roResp = await swSend({ action:'asc_swFetchRO', roId });
+        if (!roResp.success) throw new Error(roResp.error);
+        swRoData = roResp.data;
+        swRoData.roId = roId; // Stamp URL-based ID so lock checks work reliably
 
-        swServicesRendered = false; // Reset so services re-render for new RO
-
-        try {
-            const roResp = await swSend({ action:'asc_swFetchRO', roId, cloudRunUrl: creds.cloudRunUrl });
-            if (!roResp.success) throw new Error(roResp.error);
-            swRoData = roResp.data;
-            swRoData.roId = roId; // Stamp URL-based ID so lock checks work reliably
-
-            const histResp = await swSend({ action:'asc_swFetchVehicleHistory', vehicleId: swRoData.vehicle.id, shopId: swRoData.shopId, cloudRunUrl: creds.cloudRunUrl });
-            if (histResp.success) {
-                swVehicleHistory = histResp.data;
-                console.log('[ASC] Vehicle history:', swVehicleHistory);
-            } else {
-                console.log('[ASC] Vehicle history fetch failed:', histResp.error);
-            }
-
-            const pmrrResp = await swSend({ action:'asc_swGeneratePMRR', data: swRoData, vehicleHistory: swVehicleHistory, apiKey });
-            swPmrrData = pmrrResp.success ? pmrrResp.data : {
-                recommendedInterval: 6, estimatedMileage: (swRoData.mileage||0)+6000,
-                services: [{ name:'Full-synthetic oil service', category:'essential' },{ name:'Tire rotation', category:'essential' }]
-            };
-
-            swDisplayRO();
-            await swLoadScheduleData();
-            swLoadingRoId = null; // Release lock on success
-        } catch (err) {
-            console.error('SW: Failed to load RO', err);
-            swLoadingRoId = null; // Release lock on error so retry is possible
+        const histResp = await swSend({ action:'asc_swFetchVehicleHistory', vehicleId: swRoData.vehicle.id });
+        if (histResp.success) {
+            swVehicleHistory = histResp.data;
+            console.log('[ASC] Vehicle history:', swVehicleHistory);
+        } else {
+            console.log('[ASC] Vehicle history fetch failed:', histResp.error);
         }
-    });
+
+        const pmrrResp = await swSend({ action:'asc_swGeneratePMRR', data: swRoData, vehicleHistory: swVehicleHistory });
+        swPmrrData = pmrrResp.success ? pmrrResp.data : {
+            recommendedInterval: 6, estimatedMileage: (swRoData.mileage||0)+6000,
+            services: [{ name:'Full-synthetic oil service', category:'essential' },{ name:'Tire rotation', category:'essential' }]
+        };
+
+        swDisplayRO();
+        await swLoadScheduleData();
+        swLoadingRoId = null; // Release lock on success
+    } catch (err) {
+        console.error('SW: Failed to load RO', err);
+        swLoadingRoId = null; // Release lock on error so retry is possible
+    }
 }
 
 function swDisplayRO() {
@@ -2242,18 +2078,13 @@ async function swLoadScheduleData() {
     const start = new Date(target); start.setDate(start.getDate() - 7);
     const end = new Date(target); end.setDate(end.getDate() + 14);
 
-    chrome.storage.local.get(['tmCredentials'], async result => {
-        const creds = result.tmCredentials;
-        if (!creds?.cloudRunUrl) return;
-        try {
-            const cr = await swSend({ action:'asc_swFetchAppointmentCounts', shopId: swRoData.shopId,
-                startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0],
-                cloudRunUrl: creds.cloudRunUrl });
-            if (cr.success) swAppointmentCounts = cr.data;
-        } catch(e) { swAppointmentCounts = {}; }
-        swPopulateDays(target);
-        swPopulateServices();
-    });
+    try {
+        const cr = await swSend({ action:'asc_swFetchAppointmentCounts',
+            startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] });
+        if (cr.success) swAppointmentCounts = cr.data;
+    } catch(e) { swAppointmentCounts = {}; }
+    swPopulateDays(target);
+    swPopulateServices();
 }
 
 async function swConfirmAppointment() {
@@ -2280,20 +2111,16 @@ async function swConfirmAppointment() {
         appointmentType: swSelectedType, color: swSelectedColor
     };
 
-    chrome.storage.local.get(['tmCredentials'], async result => {
-        const creds = result.tmCredentials;
-        if (!creds?.cloudRunUrl) { alert('TekMetric not configured. Open Settings to set up.'); btn.disabled=false; btn.textContent='Confirm Appointment'; return; }
-        try {
-            const resp = await swSend({ action:'asc_swCreateAppointment', appointmentData: apptData, cloudRunUrl: creds.cloudRunUrl });
-            if (resp.success) {
-                btn.textContent = 'Appointment Created!';
-                btn.style.background = '#28a745';
-            } else throw new Error(resp.error);
-        } catch (err) {
-            alert(`Failed to create appointment: ${err.message}`);
-            btn.disabled = false; btn.textContent = 'Confirm Appointment';
-        }
-    });
+    try {
+        const resp = await swSend({ action:'asc_swCreateAppointment', appointmentData: apptData });
+        if (resp.success) {
+            btn.textContent = 'Appointment Created!';
+            btn.style.background = '#28a745';
+        } else throw new Error(resp.error);
+    } catch (err) {
+        alert(`Failed to create appointment: ${err.message}`);
+        btn.disabled = false; btn.textContent = 'Confirm Appointment';
+    }
 }
 
 function swCopySummary() {
@@ -2335,12 +2162,8 @@ function swCopySummary() {
 function swOpenScheduler(e) {
     if (e) e.preventDefault();
     if (!swSelectedDate) { alert('Please select a date first.'); return; }
-    chrome.storage.local.get(['tmCredentials'], result => {
-        const creds = result.tmCredentials;
-        if (!creds?.shopId) { alert('Shop ID not configured. Open Settings to set up.'); return; }
-        const url = `https://sandbox.tekmetric.com/admin/shop/${creds.shopId}/appointments?view=day&dayViewResource=DEFAULT&date=${encodeURIComponent(new Date(swSelectedDate).toISOString())}`;
-        chrome.tabs.create({ url });
-    });
+    const url = `https://sandbox.tekmetric.com/admin/shop/${ASC_SHOP_ID}/appointments?view=day&dayViewResource=DEFAULT&date=${encodeURIComponent(new Date(swSelectedDate).toISOString())}`;
+    chrome.tabs.create({ url });
 }
 
 function swClearAndRestart() {
@@ -2686,38 +2509,22 @@ async function mocGenerateSuggestions(lesson) {
   const btns = document.querySelectorAll('#moc-suggestions .moc-suggest-btn');
   btns.forEach(b => { b.textContent = '…'; b.disabled = true; });
 
-  const key = await new Promise(resolve => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['apiKey'], r => resolve(r.apiKey || ''));
-    } else { resolve(''); }
-  });
-
   const defaults = [
     'I have to give feedback to a teammate who\'s been cutting corners. What\'s the best way to approach that conversation?',
     'A customer is choosing between coming in today vs. scheduling for next week — how should I think about guiding that conversation?',
     'Can you give me three coaching points I can share with a new team member about how to open a conversation with a customer?'
   ];
 
-  if (!key) { btns.forEach((b, i) => { b.textContent = defaults[i]; b.disabled = false; }); return; }
-
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const systemPrompt = `You generate exactly 3 short, practical culture questions for a Cardinal Plaza Shell service advisor to ask their culture coach. The questions must be directly inspired by today's lesson theme. Each question should be one of these types: (1) a real workplace dilemma or decision they face, (2) a choice between two approaches, or (3) a request for coaching points to share with a teammate. Return ONLY a JSON array of 3 strings — no preamble, no markdown, no extra text.`;
+    const messages = [{ role: 'user', content: `Today's lesson: "${lesson.title}"\n\n${lesson.body}\n\nGenerate 3 sample questions.` }];
+    const response = await fetch(`${ASC_CLOUD_RUN_URL}/ai/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        system: `You generate exactly 3 short, practical culture questions for a Cardinal Plaza Shell service advisor to ask their culture coach. The questions must be directly inspired by today's lesson theme. Each question should be one of these types: (1) a real workplace dilemma or decision they face, (2) a choice between two approaches, or (3) a request for coaching points to share with a teammate. Return ONLY a JSON array of 3 strings — no preamble, no markdown, no extra text.`,
-        messages: [{ role: 'user', content: `Today's lesson: "${lesson.title}"\n\n${lesson.body}\n\nGenerate 3 sample questions.` }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module: 'assistant', messages, context: { systemPrompt } })
     });
     const data = await response.json();
-    const raw = data.content?.[0]?.text?.trim() || '[]';
+    const raw = (data.text || '').trim();
     const questions = JSON.parse(raw.replace(/```json|```/g, '').trim());
     if (Array.isArray(questions) && questions.length === 3) {
       btns.forEach((b, i) => { b.textContent = questions[i]; b.disabled = false; });
@@ -2774,19 +2581,6 @@ async function mocSend() {
   mocShowTyping();
   document.getElementById('moc-send').disabled = true;
 
-  const key = await new Promise(resolve => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['apiKey'], r => resolve(r.apiKey || ''));
-    } else { resolve(''); }
-  });
-
-  if (!key) {
-    mocRemoveTyping();
-    document.getElementById('moc-answer-text').textContent = 'API key not found. Please configure it in Hub Settings.';
-    document.getElementById('moc-send').disabled = false;
-    return;
-  }
-
   const systemPrompt = `You are the culture coach for Cardinal Plaza Shell, an automotive service center in Springfield, VA. You embody the shop's 14 Fundamentals and serve as a warm, direct, thoughtful advisor to service advisors.
 
 Today's Golden Lesson shared with the team:
@@ -2804,23 +2598,13 @@ Your role:
 - Vocabulary: "oil service" not "oil change", "courtesy check" not "inspection", "automotive technician" not just "technician"`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${ASC_CLOUD_RUN_URL}/ai/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key.trim(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: mocHistory
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module: 'assistant', messages: mocHistory, context: { systemPrompt } })
     });
     const data = await response.json();
-    const reply = data.content?.[0]?.text || 'Something went wrong. Please try again.';
+    const reply = (data.success && data.text) ? data.text : 'Something went wrong. Please try again.';
     mocHistory.push({ role: 'assistant', content: reply });
     mocLastAnswer = reply;
     mocRemoveTyping();
@@ -2828,7 +2612,6 @@ Your role:
     // Save to persistent history
     const lesson = MOC_LESSONS[mocCurrentIdx];
     mocSaveToHistory(mocLastQuestion, reply, lesson.num, lesson.title);
-    // Show the Previous Answers button on S1
   } catch {
     mocRemoveTyping();
     const fallback = 'Connection error. Please check your network and try again.';

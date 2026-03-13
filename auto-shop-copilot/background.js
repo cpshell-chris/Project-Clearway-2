@@ -2,6 +2,9 @@
 // Merged service worker for SA Hub + Admin Hub functionality.
 // All action prefixes unified to asc_
 
+const ASC_CLOUD_RUN_URL = 'https://advance-appointment-service-361478515851.us-east4.run.app';
+const ASC_SHOP_ID = '238';
+
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ windowId: tab.windowId });
 });
@@ -29,28 +32,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'asc_searchKnowledge') {
-    performKnowledgeSearch(request.query, request.apiKey, request.vehicleContext || null)
+    performKnowledgeSearch(request.query, request.vehicleContext || null)
       .then(result => sendResponse({ success: true, data: result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
   if (request.action === 'asc_generateVCA') {
-    performVCAGeneration(request.input, request.type, request.apiKey)
+    performVCAGeneration(request.input, request.type)
       .then(result => sendResponse({ success: true, data: result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
   if (request.action === 'asc_sodCall') {
-    performClaudeCall(request.systemPrompt, request.messages, request.apiKey)
+    performClaudeCall(request.systemPrompt, request.messages)
       .then(result => sendResponse({ success: true, data: result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
   if (request.action === 'asc_amaCall') {
-    performClaudeCall(request.systemPrompt, request.messages, request.apiKey)
+    performClaudeCall(request.systemPrompt, request.messages)
       .then(result => sendResponse({ success: true, data: result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -58,37 +61,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // Scheduling Wizard handlers
   if (request.action === 'asc_swTestConnection') {
-    swTestConnection(request.cloudRunUrl)
+    swTestConnection()
       .then(r => sendResponse({ success: true, data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_swFetchRO') {
-    swFetchRepairOrder(request.roId, request.cloudRunUrl)
+    swFetchRepairOrder(request.roId)
       .then(r => sendResponse({ success: true, data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_swFetchVehicleHistory') {
-    swFetchVehicleHistory(request.vehicleId, request.shopId, request.cloudRunUrl)
+    swFetchVehicleHistory(request.vehicleId)
       .then(r => sendResponse({ success: true, data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_swFetchAppointmentCounts') {
-    swFetchAppointmentCounts(request.shopId, request.startDate, request.endDate, request.cloudRunUrl)
+    swFetchAppointmentCounts(request.startDate, request.endDate)
       .then(r => sendResponse({ success: true, data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_swGeneratePMRR') {
-    swGeneratePMRR(request.data, request.vehicleHistory, request.apiKey)
+    swGeneratePMRR(request.data, request.vehicleHistory)
       .then(r => sendResponse({ success: true, data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_swCreateAppointment') {
-    swCreateAppointment(request.appointmentData, request.cloudRunUrl)
+    swCreateAppointment(request.appointmentData)
       .then(r => sendResponse({ success: true, data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
@@ -96,19 +99,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // TekMetric handlers
   if (request.action === 'asc_tmTestConnection') {
-    tmTestConnection(request.credentials)
+    tmTestConnection()
       .then(r  => sendResponse({ success: true,  data:  r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_tmGetRO') {
-    tmGetRepairOrder(request.roNumber, request.credentials)
+    tmGetRepairOrder(request.roNumber)
       .then(r  => sendResponse({ success: true,  data:  r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
   }
   if (request.action === 'asc_tmSearch') {
-    tmSearch(request.query, request.searchType, request.credentials)
+    tmSearch(request.query, request.searchType)
       .then(r  => sendResponse({ success: true,  data:  r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true;
@@ -120,7 +123,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // ==================== KNOWLEDGE ASSISTANT ====================
 
-async function performKnowledgeSearch(query, apiKey, vehicleContext) {
+async function performKnowledgeSearch(query, vehicleContext) {
 
   let vehicleInstruction = '';
   let vehicleJsonField = '"vehicle_context": null,';
@@ -270,29 +273,8 @@ The dual mandate: deliver accurate, expert automotive knowledge while organicall
     ? `Service advisor is asking about: "${query}" for the vehicle listed above.\n\nGenerate the complete Knowledge Assistant report using the vehicle and history context. Return only valid JSON.`
     : `Service advisor is asking about: "${query}"\n\nGenerate the complete Knowledge Assistant report. Return only valid JSON.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1800,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }]
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'API request failed');
-  }
-
-  const data = await response.json();
-  const text = data.content[0].text;
+  const messages = [{ role: 'user', content: userMessage }];
+  const text = await performClaudeCall(systemPrompt, messages);
   const clean = text.replace(/```json|```/g, '').trim();
   const jsonMatch = clean.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Could not parse response. Please try again.');
@@ -302,7 +284,7 @@ The dual mandate: deliver accurate, expert automotive knowledge while organicall
 
 // ==================== VCA GENERATOR ====================
 
-async function performVCAGeneration(input, type, apiKey) {
+async function performVCAGeneration(input, type) {
   const vcaInstructions = getVCAInstructions();
 
   let requestText = '';
@@ -328,28 +310,7 @@ TEKMETRIC DATA:
 
 ${input}`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'API request failed');
-  }
-
-  const data = await response.json();
-  return data.content[0].text;
+  return await performClaudeCall(null, [{ role: 'user', content: prompt }]);
 }
 
 function getVCAInstructions() {
@@ -990,37 +951,30 @@ END OF CANONICAL VCA INSTRUCTIONS
 
 // ==================== CLAUDE API CALL (SOD + AMA) ====================
 
-async function performClaudeCall(systemPrompt, messages, apiKey) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+async function performClaudeCall(systemPrompt, messages) {
+  const response = await fetch(`${ASC_CLOUD_RUN_URL}/ai/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages: messages
+      module: 'assistant',
+      messages: messages,
+      context: { systemPrompt }
     })
   });
-
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'API request failed');
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || 'AI request failed');
   }
-
   const data = await response.json();
-  return data.content[0].text;
+  if (!data.success) throw new Error(data.message || 'AI request failed');
+  return data.text;
 }
 
 
 // ==================== TEKMETRIC INTEGRATION (via Cloud Run) ====================
 
-async function tmTestConnection(creds) {
-  const baseUrl = creds.cloudRunUrl || creds.environment;
+async function tmTestConnection() {
+  const baseUrl = ASC_CLOUD_RUN_URL;
   console.log('[ASC] Testing Cloud Run connection:', baseUrl);
 
   const testEndpoints = [
@@ -1038,7 +992,7 @@ async function tmTestConnection(creds) {
         console.log('[ASC] Cloud Run accessible');
         return {
           shopName: 'Cloud Run Service',
-          shopId: creds.shopId || '238',
+          shopId: ASC_SHOP_ID,
           endpoint: baseUrl
         };
       }
@@ -1050,8 +1004,8 @@ async function tmTestConnection(creds) {
   throw new Error('Could not connect to Cloud Run service. Check URL.');
 }
 
-async function tmGetRepairOrder(roNumber, creds) {
-  const baseUrl = creds.cloudRunUrl || creds.environment;
+async function tmGetRepairOrder(roNumber) {
+  const baseUrl = ASC_CLOUD_RUN_URL;
   console.log('[ASC] Fetching RO:', roNumber, 'from', baseUrl);
 
   const endpointPatterns = [
@@ -1084,10 +1038,10 @@ async function tmGetRepairOrder(roNumber, creds) {
   throw new Error(`RO #${roNumber} not found. Tried multiple endpoint patterns - check console for details.`);
 }
 
-async function tmSearch(query, searchType, creds) {
+async function tmSearch(query, searchType) {
   console.log('[ASC] Search:', searchType, query);
   if (searchType === 'ro') {
-    return tmGetRepairOrder(query, creds);
+    return tmGetRepairOrder(query);
   }
   throw new Error('Customer search not yet implemented. Use RO number search.');
 }
@@ -1195,15 +1149,15 @@ ${jobs.map((job,i) => `Job ${i+1}: ${JSON.stringify(job)}`).join('\n')}
 
 // ==================== SCHEDULING WIZARD BACKEND ====================
 
-async function swTestConnection(cloudRunUrl) {
-  const baseUrl = cloudRunUrl.replace(/\/$/, '');
+async function swTestConnection() {
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
   const res = await fetch(`${baseUrl}/health`);
   if (res.ok) return { connected: true, endpoint: baseUrl };
   throw new Error('Could not connect to Cloud Run service.');
 }
 
-async function swFetchRepairOrder(roId, cloudRunUrl) {
-  const baseUrl = cloudRunUrl.replace(/\/$/, '');
+async function swFetchRepairOrder(roId) {
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
   const res = await fetch(`${baseUrl}/ro/${roId}`);
   if (!res.ok) throw new Error(`Failed to fetch RO #${roId}`);
   const data = await res.json();
@@ -1215,9 +1169,9 @@ async function swFetchRepairOrder(roId, cloudRunUrl) {
   };
 }
 
-async function swFetchVehicleHistory(vehicleId, shopId, cloudRunUrl) {
-  const baseUrl = cloudRunUrl.replace(/\/$/, '');
-  const res = await fetch(`${baseUrl}/vehicle-history/${vehicleId}?shopId=${shopId}`);
+async function swFetchVehicleHistory(vehicleId) {
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
+  const res = await fetch(`${baseUrl}/vehicle-history/${vehicleId}?shopId=${ASC_SHOP_ID}`);
   if (!res.ok) throw new Error('Failed to fetch vehicle history');
   const data = await res.json();
   if (!data.success) throw new Error(data.message || 'Vehicle history fetch failed');
@@ -1228,9 +1182,9 @@ async function swFetchVehicleHistory(vehicleId, shopId, cloudRunUrl) {
   };
 }
 
-async function swFetchAppointmentCounts(shopId, startDate, endDate, cloudRunUrl) {
-  const baseUrl = cloudRunUrl.replace(/\/$/, '');
-  const params = new URLSearchParams({ shopId, startDate, endDate });
+async function swFetchAppointmentCounts(startDate, endDate) {
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
+  const params = new URLSearchParams({ shopId: ASC_SHOP_ID, startDate, endDate });
   const res = await fetch(`${baseUrl}/appointments/counts?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch appointment counts');
   const data = await res.json();
@@ -1238,8 +1192,7 @@ async function swFetchAppointmentCounts(shopId, startDate, endDate, cloudRunUrl)
   return data.counts;
 }
 
-async function swGeneratePMRR(roData, vehicleHistory, apiKey) {
-  const cleanApiKey = apiKey.trim().replace(/[\r\n]/g, '');
+async function swGeneratePMRR(roData, vehicleHistory) {
   const currentMileage    = roData.mileage || 0;
   const estimatedMileage  = currentMileage + 6000;
 
@@ -1330,25 +1283,9 @@ Return ONLY valid JSON — no markdown, no explanation:
 {"recommendedInterval":${defaultInterval},"estimatedMileage":${defaultMileage},"services":[{"name":"service name","category":"overdue|essential|recommended|no-history"}]}`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': cleanApiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: `Vehicle: ${roData.vehicle?.year||''} ${roData.vehicle?.make||''} ${roData.vehicle?.model||(roData.vehicle?.trim||'')}\nCurrent mileage: ${roData.mileage||0}\nGenerate the predictive maintenance JSON now.` }]
-      })
-    });
-
-    if (!response.ok) throw new Error('API failed');
-    const data = await response.json();
-    const jsonMatch = data.content[0].text.match(/\{[\s\S]*\}/);
+    const pmrrMessages = [{ role: 'user', content: `Vehicle: ${roData.vehicle?.year||''} ${roData.vehicle?.make||''} ${roData.vehicle?.model||(roData.vehicle?.trim||'')}\nCurrent mileage: ${roData.mileage||0}\nGenerate the predictive maintenance JSON now.` }];
+    const rawText = await performClaudeCall(systemPrompt, pmrrMessages);
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       if (!parsed.recommendedInterval) parsed.recommendedInterval = defaultInterval;
@@ -1381,8 +1318,8 @@ Return ONLY valid JSON — no markdown, no explanation:
   }
 }
 
-async function swCreateAppointment(appointmentData, cloudRunUrl) {
-  const baseUrl = cloudRunUrl.replace(/\/$/, '');
+async function swCreateAppointment(appointmentData) {
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
   const res = await fetch(`${baseUrl}/appointments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
