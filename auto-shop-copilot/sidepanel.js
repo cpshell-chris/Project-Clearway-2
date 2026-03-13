@@ -131,6 +131,12 @@ window.addEventListener('load', () => {
 
     // ── Initialize AMA ──
     initAMA();
+
+    // ── Lesson teaser on hub ──
+    initLessonTeaser();
+
+    // ── MOC S3 back arrow ──
+    document.getElementById('moc-s3-back')?.addEventListener('click', mocShowS1);
 });
 
 // ==================== SCREEN SWITCHING (two-screen architecture) ====================
@@ -180,6 +186,59 @@ function openTool(toolKey) {
 function goBackToHub() {
     document.getElementById('screen-tool').classList.remove('active');
     document.getElementById('screen-hub').classList.add('active');
+}
+
+// ==================== LESSON TEASER (Hub) ====================
+
+let teaserLessonIdx = -1;
+
+function initLessonTeaser() {
+    // Pick a random lesson for the teaser (stored so Culture Coach can reuse if desired)
+    teaserLessonIdx = Math.floor(Math.random() * MOC_LESSONS.length);
+    const lesson = MOC_LESSONS[teaserLessonIdx];
+
+    document.getElementById('teaser-lesson-num').textContent = `#${lesson.num} of 60`;
+    document.getElementById('teaser-lesson-intro').textContent =
+        'Before we begin today\u2019s work, I want to share something with you to ponder through the day.';
+
+    // Split body into paragraphs; show first paragraph as snippet
+    const paras = lesson.body.split('\n\n').map(p => p.trim()).filter(Boolean);
+    const snippet = paras[0] || '';
+    const rest    = paras.slice(1);
+
+    document.getElementById('teaser-lesson-snippet').textContent = snippet;
+
+    const fullInner = document.getElementById('teaser-lesson-full-inner');
+    fullInner.innerHTML = '';
+    rest.forEach(para => {
+        const p = document.createElement('p');
+        p.textContent = para;
+        fullInner.appendChild(p);
+    });
+
+    // More / collapse toggle
+    const moreBtn  = document.getElementById('teaser-more-btn');
+    const fullDiv  = document.getElementById('teaser-lesson-full');
+    const openBtn  = document.getElementById('teaser-open-btn');
+    let expanded = false;
+
+    moreBtn.addEventListener('click', () => {
+        expanded = !expanded;
+        if (expanded) {
+            fullDiv.classList.add('expanded');
+            moreBtn.textContent = 'Show Less ▴';
+            openBtn.classList.add('visible');
+        } else {
+            fullDiv.classList.remove('expanded');
+            moreBtn.textContent = 'Read More ▾';
+            openBtn.classList.remove('visible');
+        }
+    });
+
+    // "Open Culture Coach" opens MOC and pre-sets the same lesson
+    openBtn.addEventListener('click', () => {
+        mocOpenWithLesson(teaserLessonIdx);
+    });
 }
 
 // ==================== KNOWLEDGE ASSISTANT v2.1 ====================
@@ -2593,6 +2652,45 @@ function mocGoHub() {
   mocLastAnswer = '';
 }
 
+// Opens Culture Coach pre-set to a specific lesson index (from teaser)
+function mocOpenWithLesson(idx) {
+  document.getElementById('screen-hub').classList.remove('active');
+  document.getElementById('screen-moc').classList.add('active');
+  if (!mocInitialized) {
+    mocInitialized = true;
+    mocApplyLesson(idx);
+    // register listeners same as mocOpen
+    document.getElementById('moc-new-btn')  ?.addEventListener('click', mocPickAndRender);
+    document.getElementById('moc-send')     ?.addEventListener('click', mocSend);
+    document.getElementById('moc-back-btn') ?.addEventListener('click', mocGoHub);
+    document.getElementById('moc-prev-btn') ?.addEventListener('click', mocOpenS3);
+    document.getElementById('moc-hiw-btn')  ?.addEventListener('click', () => {
+      document.getElementById('moc-hiw-modal').classList.add('active');
+    });
+    document.getElementById('moc-hiw-close')?.addEventListener('click', () => {
+      document.getElementById('moc-hiw-modal').classList.remove('active');
+    });
+    document.getElementById('moc-hiw-modal')?.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('moc-hiw-modal'))
+        document.getElementById('moc-hiw-modal').classList.remove('active');
+    });
+    document.getElementById('moc-suggestions')?.addEventListener('click', function(e) {
+      const btn = e.target.closest('.moc-suggest-btn');
+      if (btn && !btn.disabled) mocAskSuggestion(btn);
+    });
+    document.getElementById('moc-input')?.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mocSend(); }
+    });
+    document.getElementById('moc-input')?.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 72) + 'px';
+    });
+    document.getElementById('moc-clearq-btn') ?.addEventListener('click', mocGoHome);
+  } else {
+    mocApplyLesson(idx);
+  }
+}
+
 function mocOpen() {
   document.getElementById('screen-hub').classList.remove('active');
   document.getElementById('screen-moc').classList.add('active');
@@ -2658,10 +2756,7 @@ function mocCopy() {
   });
 }
 
-function mocPickAndRender() {
-  let idx;
-  do { idx = Math.floor(Math.random() * MOC_LESSONS.length); }
-  while (idx === mocCurrentIdx);
+function mocApplyLesson(idx) {
   mocCurrentIdx = idx;
   const lesson = MOC_LESSONS[idx];
 
@@ -2683,19 +2778,21 @@ function mocPickAndRender() {
   mocLastQuestion = '';
   mocLastAnswer   = '';
 
-  // Ensure S1 is showing
   mocShowS1();
 
-  // Clear input
   const input = document.getElementById('moc-input');
   if (input) { input.value = ''; input.style.height = 'auto'; }
 
-  // Hide previous answer button
-
-  // Show suggestions and generate fresh ones
   const sugg = document.getElementById('moc-suggestions');
   if (sugg) sugg.style.display = 'flex';
   mocGenerateSuggestions(lesson);
+}
+
+function mocPickAndRender() {
+  let idx;
+  do { idx = Math.floor(Math.random() * MOC_LESSONS.length); }
+  while (idx === mocCurrentIdx);
+  mocApplyLesson(idx);
 }
 
 async function mocGenerateSuggestions(lesson) {
