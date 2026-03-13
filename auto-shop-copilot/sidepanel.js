@@ -1669,7 +1669,8 @@ function initTekMetric() {
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('tm-ro-search-wrap');
         if (!wrap?.classList.contains('open')) return;
-        if (!wrap.contains(e.target) && e.target.id !== 'tm-search-btn') {
+        const btn = document.getElementById('tm-search-btn');
+        if (!wrap.contains(e.target) && !btn?.contains(e.target)) {
             tmCloseROSearch();
         }
     });
@@ -2285,13 +2286,6 @@ async function swLoadPMRRBackground(roId) {
 }
 
 function swDisplayRO() {
-    const banner = document.getElementById('sw-ro-banner');
-    const text = document.getElementById('sw-ro-text');
-    const name = `${swRoData.customer.firstName||''} ${swRoData.customer.lastName||''}`.trim();
-    const vehicle = `${swRoData.vehicle.year||''} ${swRoData.vehicle.make||''} ${swRoData.vehicle.model||''}`.trim();
-    text.textContent = `RO #${swRoData.roNumber} · ${name} · ${vehicle}`;
-    banner.classList.add('active');
-
     const recommended = swPmrrData.recommendedInterval || 6;
     if (!swSelectedMonthInterval) swSelectedMonthInterval = recommended;
 
