@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Shop Copilot",
+  "version": "1.0.0",
+  "description": "Unified AI copilot for automotive service advisors and shop administrators.",
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "https://sandbox.tekmetric.com/*",
+    "https://shop.tekmetric.com/*",
+    "https://*.run.app/*",
+    "https://advance-appointment-service-361478515851.us-east4.run.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://sandbox.tekmetric.com/*",
+        "https://shop.tekmetric.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_title": "Auto Shop Copilot",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  }
+}
