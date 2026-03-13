@@ -170,14 +170,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .ka-nav-row { display: flex; gap: 8px; }
 .ka-nav-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #FED7AA; background: #FFF7ED; font-size: 11px; font-weight: 600; color: #EA580C; cursor: pointer; text-align: center; transition: all 0.18s; }
 .ka-nav-btn:hover { background: #FFEDD5; border-color: #EA580C; }
-.sw-steps { display: flex; justify-content: space-between; padding: 12px 16px 0; margin-bottom: 14px; }
-.sw-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; padding-bottom: 10px; }
-.sw-step:not(:last-child)::after { content: ''; position: absolute; top: 13px; left: 55%; width: 90%; height: 2px; background: #dee2e6; z-index: 0; }
+.sw-steps { display: flex; justify-content: space-between; padding: 5px 16px 0; margin-bottom: 6px; }
+.sw-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; padding-bottom: 4px; }
+.sw-step:not(:last-child)::after { content: ''; position: absolute; top: 10px; left: 55%; width: 90%; height: 1px; background: #dee2e6; z-index: 0; }
 .sw-step.complete:not(:last-child)::after { background: #28a745; }
-.sw-step-num { width: 26px; height: 26px; border-radius: 50%; background: #dee2e6; color: #6c757d; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; position: relative; z-index: 1; margin-bottom: 4px; }
+.sw-step-num { width: 20px; height: 20px; border-radius: 50%; background: #dee2e6; color: #6c757d; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 10px; position: relative; z-index: 1; margin-bottom: 2px; }
 .sw-step.active .sw-step-num { background: #3D3D3D; color: white; }
 .sw-step.complete .sw-step-num { background: #28a745; color: white; }
-.sw-step-lbl { font-size: 10px; color: #6c757d; text-align: center; }
+.sw-step-lbl { font-size: 9px; color: #6c757d; text-align: center; }
 .sw-step.active .sw-step-lbl { color: #F97316; font-weight: 600; }
 .sw-step.complete .sw-step-lbl { color: #28a745; font-weight: 600; }
 .sw-screen { display: none; }
@@ -741,6 +741,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
             <div class="sw-tip-popup" id="sw-mileage-tooltip"></div>
           </div>
         </div>
+        <p id="sw-mileage-disclaimer" style="display:none;font-size:10px;color:#9494A8;margin:-10px 0 10px 0;line-height:1.4;">* Recommended interval based on predictive mileage</p>
         <div class="sw-card">
           <div class="sw-section-label">Select Day</div>
           <div class="sw-week-nav">
@@ -749,15 +750,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
             <button class="sw-week-btn" id="sw-week-next" type="button">Week &rarr;</button>
           </div>
           <div class="sw-day-grid" id="sw-day-grid"></div>
-          <button class="btn btn-secondary sw-other-date-btn" id="sw-other-date-btn" type="button">Select Other Date</button>
-          <input type="date" class="sw-date-picker" id="sw-custom-date" />
           <div class="sw-section-label">Drop-Off or Wait</div>
           <div class="sw-type-grid">
             <button class="sw-type-btn" data-swtype="dropoff" type="button">Drop-Off</button>
             <button class="sw-type-btn" data-swtype="wait" type="button">Wait</button>
           </div>
           <div class="sw-section-label">Time</div>
-          <p id="sw-time-note" style="font-size:11px;color:#555;margin:-6px 0 10px 0;line-height:1.5;display:none;">All vehicles dropped off for service must be dropped off no later than 9:00 AM to ensure same-day service. Vehicles will be completed by end of business day.</p>
           <div class="sw-time-grid" id="sw-time-grid"></div>
           <div class="sw-step1-summary" id="sw-step1-summary">
             <div class="sw-summary-row">

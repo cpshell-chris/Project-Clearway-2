@@ -1854,25 +1854,7 @@ function initSchedulingWizard() {
     customAddBtn?.addEventListener('click', swAddCustomService);
     customInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); swAddCustomService(); } });
 
-    // Other date
-    document.getElementById('sw-other-date-btn')?.addEventListener('click', function() {
-        const picker = document.getElementById('sw-custom-date');
-        const isHidden = picker.style.display === 'none' || picker.style.display === '';
-        picker.style.display = isHidden ? 'block' : 'none';
-        this.textContent = isHidden ? 'Cancel Custom Date' : 'Select Other Date';
-    });
-    document.getElementById('sw-custom-date')?.addEventListener('change', function() {
-        if (this.value) {
-            document.querySelectorAll('.sw-day-card').forEach(c => c.classList.remove('selected'));
-            swSelectedDate = new Date(this.value + 'T12:00:00').toISOString();
-            swPersistState();
-            this.style.display = 'none';
-            document.getElementById('sw-other-date-btn').textContent = 'Select Other Date';
-            swValidateStep1();
-        }
-    });
-
-    // Type buttons — filter times and show drop-off note
+    // Type buttons — filter times
     document.querySelectorAll('[data-swtype]').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -2024,9 +2006,8 @@ function swPopulateTimes() {
 
     const ALL_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM',
                        '1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM'];
-    const DROPOFF_TIMES = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM'];
 
-    const times = (swSelectedType === 'dropoff') ? DROPOFF_TIMES : ALL_TIMES;
+    const times = ALL_TIMES;
 
     times.forEach(t => {
         const btn = document.createElement('button');
@@ -2042,18 +2023,11 @@ function swPopulateTimes() {
         grid.appendChild(btn);
     });
 
-    // If a previously selected time is no longer valid (drop-off selected after a later time), clear it
-    if (swSelectedType === 'dropoff' && swSelectedTime && !DROPOFF_TIMES.includes(swSelectedTime)) {
-        swSelectedTime = null;
-        swPersistState();
-    }
 }
 
-// Show/hide drop-off note and rebuild time grid when type changes
+// Rebuild time grid when type changes
 function swApplyTypeFilter() {
-    const note = document.getElementById('sw-time-note');
-    if (note) note.style.display = (swSelectedType === 'dropoff') ? 'block' : 'none';
-    swPopulateTimes(); // rebuild with correct time set
+    swPopulateTimes();
 }
 
 
@@ -2213,6 +2187,8 @@ function swDisplayRO() {
     swUpdateMileageSelect();
     swUpdateTooltip();
     document.getElementById('sw-interval-box').classList.add('visible');
+    const disclaimer = document.getElementById('sw-mileage-disclaimer');
+    if (disclaimer) disclaimer.style.display = 'block';
     swWireMileageTooltip();
 }
 
