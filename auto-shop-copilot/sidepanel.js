@@ -167,6 +167,12 @@ function openTool(toolKey) {
     document.getElementById('screen-hub').classList.remove('active');
     document.getElementById('screen-tool').classList.add('active');
 
+    // Move RO banner + search into tool screen
+    const _toolHeader = document.getElementById('tool-header');
+    const _roBar = document.getElementById('tm-banner');
+    const _roSearch = document.getElementById('tm-ro-search-wrap');
+    if (_roBar && _toolHeader) { _toolHeader.after(_roBar); _roBar.after(_roSearch); }
+
     // Store current tool for HiW
     document.getElementById('screen-tool').dataset.currentTool = toolKey;
 
@@ -186,6 +192,12 @@ function openTool(toolKey) {
 function goBackToHub() {
     document.getElementById('screen-tool').classList.remove('active');
     document.getElementById('screen-hub').classList.add('active');
+
+    // Move RO banner + search back to hub screen
+    const _hubHeader = document.querySelector('#screen-hub .hub-header');
+    const _roBar = document.getElementById('tm-banner');
+    const _roSearch = document.getElementById('tm-ro-search-wrap');
+    if (_roBar && _hubHeader) { _hubHeader.after(_roBar); _roBar.after(_roSearch); }
 }
 
 // ==================== LESSON TEASER (Hub) ====================
@@ -1925,7 +1937,6 @@ function initSchedulingWizard() {
     document.getElementById('sw-s3-copy')?.addEventListener('click', swCopySummary);
     document.getElementById('sw-open-scheduler')?.addEventListener('click', swOpenScheduler);
     document.getElementById('sw-restart')?.addEventListener('click', swClearAndRestart);
-    document.getElementById('sw-clear-btn')?.addEventListener('click', swClearAndRestart);
 
     // Custom service add
     const customInput = document.getElementById('sw-custom-service-input');
