@@ -41,7 +41,12 @@
   });
 
   btn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'asc_openSidePanel' });
+    try {
+      chrome.runtime.sendMessage({ action: 'asc_openSidePanel' });
+    } catch (e) {
+      // Extension was reloaded — remove the stale button so the fresh one can inject
+      btn.remove();
+    }
   });
 
   document.body.appendChild(btn);
