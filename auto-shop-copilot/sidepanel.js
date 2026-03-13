@@ -669,7 +669,7 @@ function sodShowTyping() {
     const div = document.createElement('div');
     div.className = 'msg msg-ai';
     div.id = 'sod-typing';
-    div.innerHTML = '<span class="typing-indicator"><span></span><span></span><span></span></span>';
+    div.innerHTML = '<img class="chat-loading-gif" src="loading.gif" alt="Loading...">';
     document.getElementById('sod-chat-messages').appendChild(div);
     sodScrollChat();
 }
@@ -2846,7 +2846,11 @@ function mocShowTyping() {
   const typing = document.createElement('div');
   typing.className = 'moc-typing';
   typing.id = 'moc-typing-dots';
-  [1,2,3].forEach(() => { const d = document.createElement('div'); d.className = 'moc-dot'; typing.appendChild(d); });
+  const loadImg = document.createElement('img');
+  loadImg.src = 'loading.gif';
+  loadImg.alt = 'Loading...';
+  loadImg.className = 'moc-loading-gif';
+  typing.appendChild(loadImg);
   answerEl.appendChild(typing);
   mocShowS2();
 }
