@@ -8,6 +8,9 @@ const ASC_SHOP_ID = '238';
 
 window.addEventListener('load', () => {
     console.log('[ASC] Auto Shop Copilot loaded');
+    // Hide initial loading overlay once everything is ready
+    const _overlay = document.getElementById('app-loading-overlay');
+    if (_overlay) { _overlay.classList.add('hidden'); setTimeout(() => { _overlay.style.display = 'none'; }, 280); }
 
     // ── Tile clicks → open tool on Screen 2 ──
     document.getElementById('tile-ka') ?.addEventListener('click', () => openTool('ka'));
