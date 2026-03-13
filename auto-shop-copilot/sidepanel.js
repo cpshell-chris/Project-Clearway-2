@@ -2112,6 +2112,18 @@ function swCreateServiceItem(name, category) {
 
 let swLoadingRoId = null; // Lock: prevents concurrent or duplicate loads
 
+// Compute interval + mileage from vehicle history math alone (instant, no Claude call)
+function swBuildDefaultPMRR(roData, vehicleHistory) {
+    const currentMileage = roData.mileage || 0;
+    let defaultInterval = 6;
+    if (vehicleHistory?.avgMilesPerDay && vehicleHistory.avgMilesPerDay > 0) {
+        const milesPerMonth = vehicleHistory.avgMilesPerDay * 30.44;
+        defaultInterval = Math.max(1, Math.min(18, Math.round(6000 / milesPerMonth)));
+    }
+    const estMileage = currentMileage + Math.round((vehicleHistory?.avgMilesPerDay || 33) * 30.44 * defaultInterval);
+    return { recommendedInterval: defaultInterval, estimatedMileage: estMileage, services: [] };
+}
+
 async function swLoadRO(roId) {
     // Already loaded this RO and services are rendered — nothing to do
     if (swRoData?.roId === roId && swServicesRendered) return;
@@ -2119,34 +2131,57 @@ async function swLoadRO(roId) {
     if (swLoadingRoId === roId) return;
 
     swLoadingRoId = roId;
-    swServicesRendered = false; // Reset so services re-render for new RO
+    swServicesRendered = false;
 
     try {
+        // Step 1: Fetch RO data
         const roResp = await swSend({ action:'asc_swFetchRO', roId });
         if (!roResp.success) throw new Error(roResp.error);
         swRoData = roResp.data;
-        swRoData.roId = roId; // Stamp URL-based ID so lock checks work reliably
+        swRoData.roId = roId;
 
+        // Step 2: Fetch vehicle history (needs vehicleId from step 1)
         const histResp = await swSend({ action:'asc_swFetchVehicleHistory', vehicleId: swRoData.vehicle.id });
         if (histResp.success) {
             swVehicleHistory = histResp.data;
-            console.log('[ASC] Vehicle history:', swVehicleHistory);
         } else {
             console.log('[ASC] Vehicle history fetch failed:', histResp.error);
         }
 
-        const pmrrResp = await swSend({ action:'asc_swGeneratePMRR', data: swRoData, vehicleHistory: swVehicleHistory });
-        swPmrrData = pmrrResp.success ? pmrrResp.data : {
-            recommendedInterval: 6, estimatedMileage: (swRoData.mileage||0)+6000,
-            services: [{ name:'Full-synthetic oil service', category:'essential' },{ name:'Tire rotation', category:'essential' }]
-        };
+        // Step 3: Build default PMRR instantly from math — no Claude call needed yet
+        swPmrrData = swBuildDefaultPMRR(swRoData, swVehicleHistory);
 
+        // Step 4: Render UI immediately with defaults — user sees scheduler right away
         swDisplayRO();
         await swLoadScheduleData();
-        swLoadingRoId = null; // Release lock on success
+        swLoadingRoId = null; // Release lock — UI is now interactive
+
+        // Step 5: Run Claude PMRR in background; update services list when done
+        swLoadPMRRBackground(roId);
     } catch (err) {
         console.error('SW: Failed to load RO', err);
-        swLoadingRoId = null; // Release lock on error so retry is possible
+        swLoadingRoId = null;
+    }
+}
+
+// Fetches AI service recommendations after the UI is already visible
+async function swLoadPMRRBackground(roId) {
+    const predictiveList = document.getElementById('sw-predictive-services');
+    if (predictiveList) {
+        predictiveList.innerHTML = '<p style="font-size:12px;color:#9494A8;padding:8px 0;">Generating recommendations...</p>';
+    }
+    try {
+        const pmrrResp = await swSend({ action:'asc_swGeneratePMRR', data: swRoData, vehicleHistory: swVehicleHistory });
+        // Bail if the RO changed while Claude was thinking
+        if (swRoData?.roId !== roId) return;
+        if (pmrrResp.success) swPmrrData = pmrrResp.data;
+        swServicesRendered = false;
+        swPopulateServices();
+    } catch (err) {
+        console.error('SW: PMRR background failed', err);
+        if (predictiveList) {
+            predictiveList.innerHTML = '<p style="font-size:12px;color:#6c757d;padding:8px 0;">Could not load recommendations.</p>';
+        }
     }
 }
 
