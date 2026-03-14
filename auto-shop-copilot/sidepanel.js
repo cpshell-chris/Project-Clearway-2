@@ -2521,12 +2521,17 @@ function swCopySummary() {
 function swOpenScheduler(e) {
     if (e) e.preventDefault();
     const shopId = swRoData?.shopId || ASC_SHOP_ID;
-    const dateToUse = swSelectedDate ? new Date(swSelectedDate) : (swTargetDate || new Date());
+
+    // Compute the Monday of the currently displayed week (mirrors swPopulateDays logic)
+    const base = swTargetDate ? new Date(swTargetDate) : new Date();
+    base.setDate(base.getDate() + (swWeekOffset * 7));
+    while (base.getDay() !== 1) base.setDate(base.getDate() + 1);
+
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         const currentTab = tabs[0];
         const tabUrl = currentTab?.url || '';
         const baseUrl = tabUrl.includes('sandbox.tekmetric.com') ? 'https://sandbox.tekmetric.com' : 'https://shop.tekmetric.com';
-        const url = `${baseUrl}/admin/shop/${shopId}/appointments?date=${encodeURIComponent(dateToUse.toISOString())}`;
+        const url = `${baseUrl}/admin/shop/${shopId}/appointments?date=${encodeURIComponent(base.toISOString())}&view=week`;
         chrome.tabs.create({ url, index: (currentTab?.index ?? 0) + 1 });
     });
 }
