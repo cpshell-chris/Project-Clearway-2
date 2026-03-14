@@ -3104,8 +3104,31 @@ function rocGoToPhase(n) {
 
 function rocUpdateFromTM() {
     rocPopulateConcerns();
+    rocAutoCheck();
     if (rocCurrentPhase === 3) rocPopulateJobs();
     if (rocCurrentPhase === 4) rocPopulateApprovals();
+}
+
+function rocAutoCheck() {
+    if (!tmLoadedData) return;
+    const s = tmLoadedData.summary;
+
+    // Phase 1 checklist — check items where data already exists
+    const hasOdometer = s.odometer && s.odometer !== 'N/A' && s.odometer !== 0 && s.odometer !== '0';
+    rocSetCheck('roc-cb-1-1', (s.concernsList?.length ?? 0) > 0);   // Concerns documented
+    rocSetCheck('roc-cb-1-2', hasOdometer);                          // Mileage recorded
+    rocSetCheck('roc-cb-1-3', !!s.hasTech);                          // Technician assigned
+    rocSetCheck('roc-cb-1-4', !!(s.hasPhone || s.hasEmail));         // Contact confirmed
+}
+
+function rocSetCheck(cbId, shouldCheck) {
+    if (!shouldCheck) return;
+    const cb   = document.getElementById(cbId);
+    const item = cb?.closest('.roc-check-item');
+    if (cb && item && !cb.checked) {
+        cb.checked = true;
+        item.classList.add('checked');
+    }
 }
 
 // ── Parse helpers ──
@@ -3129,21 +3152,30 @@ function rocParseJobs() {
 function rocPopulateConcerns() {
     const el = document.getElementById('roc-concerns-list');
     if (!el) return;
-    if (!tmLoadedData?.formatted) {
+    if (!tmLoadedData) {
         el.innerHTML = '<p class="roc-no-ro-note">Open a Repair Order in TekMetric to see customer concerns.</p>';
         return;
     }
-    const match = tmLoadedData.formatted.match(/--- CLIENT CONCERNS ---\n([\s\S]*?)\n---/);
-    const lines = match
-        ? match[1].trim().split('\n').map(l => l.replace(/^[\s•\-]+/, '').trim()).filter(l => l && l !== 'See services performed')
-        : [];
-    if (lines.length === 0) {
-        el.innerHTML = '<p class="roc-no-ro-note">No customer concerns found on this RO yet.</p>';
+    // Use the direct concernsList array from summary (most reliable)
+    const lines = (tmLoadedData.summary?.concernsList || []).filter(Boolean);
+    if (lines.length > 0) {
+        el.innerHTML = lines.map(l =>
+            `<div class="roc-job-row"><span class="roc-job-name">${l}</span></div>`
+        ).join('');
         return;
     }
-    el.innerHTML = lines.map(l =>
-        `<div class="roc-job-row"><span class="roc-job-name">${l}</span></div>`
-    ).join('');
+    // Fallback: parse from formatted text
+    const match = tmLoadedData.formatted?.match(/--- CLIENT CONCERNS ---\n([\s\S]*?)\n---/);
+    const parsed = match
+        ? match[1].trim().split('\n').map(l => l.replace(/^[\s•\-]+/, '').trim()).filter(l => l && l !== 'None recorded')
+        : [];
+    if (parsed.length > 0) {
+        el.innerHTML = parsed.map(l =>
+            `<div class="roc-job-row"><span class="roc-job-name">${l}</span></div>`
+        ).join('');
+        return;
+    }
+    el.innerHTML = '<p class="roc-no-ro-note">No customer concerns found on this RO yet.</p>';
 }
 
 function rocPopulateJobs() {

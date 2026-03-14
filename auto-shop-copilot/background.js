@@ -1091,9 +1091,18 @@ function tmFormatROData(data) {
   const advisor      = ro.serviceAdvisor    ? `${ro.serviceAdvisor.firstName || ''} ${ro.serviceAdvisor.lastName || ''}`.trim() : 'N/A';
   const status       = ro.repairOrderStatus || ro.status || 'N/A';
 
-  const concerns = (ro.customerConcerns || [])
-    .map(c => `  • ${c.concern || c.description || c}`)
-    .join('\n') || '  • See services performed';
+  // TekMetric stores concerns per-job (job.concern), not at the RO level.
+  // Try ro.customerConcerns first (legacy/other endpoints), then fall back to jobs.
+  let concernsList = [];
+  if (Array.isArray(ro.customerConcerns) && ro.customerConcerns.length > 0) {
+    concernsList = ro.customerConcerns.map(c => c.concern || c.description || String(c)).filter(Boolean);
+  }
+  if (concernsList.length === 0) {
+    concernsList = jobs.map(job => job.concern || job.complaint || '').filter(Boolean);
+  }
+  const concerns = concernsList.length > 0
+    ? concernsList.map(c => `  • ${c}`).join('\n')
+    : '  • None recorded';
 
   const jobLines = jobs.map((job, i) => {
     const jobName    = job.name || job.laborName || `Service ${i + 1}`;
@@ -1162,11 +1171,16 @@ ${jobs.map((job,i) => `Job ${i+1}: ${JSON.stringify(job)}`).join('\n')}
   return {
     formatted,
     summary: {
-      roNumber: roNum,
-      customer: customerName,
-      vehicle:  vehicleDesc,
+      roNumber:     roNum,
+      customer:     customerName,
+      vehicle:      vehicleDesc,
       odometer,
-      status
+      status,
+      advisor:      advisor !== 'N/A' ? advisor : '',
+      hasPhone:     phone !== 'N/A' && !!phone,
+      hasEmail:     email !== 'N/A' && !!email,
+      hasTech:      jobs.some(j => j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName)),
+      concernsList  // raw array — used by RO Copilot for display and auto-check
     }
   };
 }
