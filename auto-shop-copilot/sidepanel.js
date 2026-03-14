@@ -1803,10 +1803,6 @@ function tmLoadRO(data) {
     const kaPill = document.getElementById('ka-vehicle-pill');
     const kaTxt  = document.getElementById('ka-vehicle-pill-text');
     if (kaPill && kaTxt) { kaTxt.textContent = `${data.summary.vehicle}${data.summary.odometer ? ' · ' + data.summary.odometer : ''}`; kaPill.classList.add('active'); }
-    const rocPill = document.getElementById('roc-vehicle-pill');
-    const rocTxt  = document.getElementById('roc-vehicle-text');
-    if (rocPill && rocTxt) { rocTxt.textContent = `${data.summary.vehicle} · RO #${data.summary.roNumber}`; rocPill.classList.add('active'); }
-
     // Auto-populate whichever tool is currently active
     tmPopulateActiveTab();
     rocUpdateFromTM();
