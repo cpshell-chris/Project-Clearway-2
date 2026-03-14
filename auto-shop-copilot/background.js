@@ -124,6 +124,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === 'asc_rocAssist') {
+    rocGenerateAssist(request.phase, request.roData || '', request.context || '', request.history || [])
+      .then(r  => sendResponse({ success: true,  data:  r }))
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+
   return true;
 });
 
@@ -1347,4 +1354,68 @@ async function swCreateAppointment(appointmentData) {
   const data = await res.json();
   if (!data.success) throw new Error(data.message || 'Appointment creation failed');
   return data.appointment;
+}
+
+
+// ==================== RO COPILOT ====================
+
+async function rocGenerateAssist(phase, roData, context, history = []) {
+  const shop = 'Cardinal Plaza Shell';
+
+  if (phase === 1) {
+    // Rephrase a customer concern into professional automotive language
+    const system = `You are an experienced automotive service advisor at ${shop}. Rewrite the rough customer concern below into a single clear, professional concern statement for the repair order. Use correct automotive terminology. Document only what the customer is experiencing — do not add diagnosis or cause. Keep it 1–3 sentences.`;
+    return await performClaudeCall(system, [
+      { role: 'user', content: `Rephrase this concern:\n"${context}"${roData ? `\n\nRO context:\n${roData}` : ''}` }
+    ]);
+  }
+
+  if (phase === 2) {
+    // Status update script while DVI is in progress
+    const system = `You are an experienced automotive service advisor at ${shop}. Write a short, warm phone script for when the customer calls to check on their vehicle while the technician is performing the Digital Vehicle Inspection. Be reassuring, set a realistic expectation for the callback, and make no promises about what will or won't be found. Keep it under 100 words.`;
+    return await performClaudeCall(system, [
+      { role: 'user', content: `Write a status update script for this customer.${roData ? `\n\nRO context:\n${roData}` : ''}` }
+    ]);
+  }
+
+  if (phase === 3) {
+    // Review the estimate for completeness
+    const system = `You are an experienced service advisor coach at ${shop}. Review this repair order estimate and give the service advisor concise, practical feedback in three sections:
+
+1. GAPS — Any services missing a customer-facing description, labor, or parts
+2. HEADS UP — Items customers commonly push back on or question (so the SA can prepare)
+3. CONSIDER ADDING — Related services commonly paired with what's already on the estimate
+
+Be direct and specific. Speak to the SA. If the estimate looks complete, say so briefly.`;
+    return await performClaudeCall(system, [
+      { role: 'user', content: `Please review this estimate:\n\n${roData}` }
+    ]);
+  }
+
+  if (phase === 4) {
+    // Generate full phone call script
+    const system = `You are an experienced service advisor coach at ${shop}. Generate a professional, conversational phone script for presenting this repair order estimate to the customer. The script must:
+- Open warmly using the customer's name and reference their vehicle
+- Walk through each service: what it is and why it matters (plain language, no jargon)
+- Present prices naturally and confidently — no apologizing
+- Include a prepared objection response for the highest-ticket item
+- Close by asking for the go-ahead in a calm, non-pushy way
+
+Format the script so it can be read directly. Use the calm, educational voice of ${shop}.`;
+    return await performClaudeCall(system, [
+      { role: 'user', content: `Generate a call script for this estimate:\n\n${roData}` }
+    ]);
+  }
+
+  if (phase === 5) {
+    // Post-sale support chat
+    const system = `You are an experienced service advisor coach at ${shop}. A service advisor is handling an unexpected situation after the customer has already approved repair work. Give calm, practical advice. Be direct — provide the exact words to use when helpful. Keep responses focused and actionable.`;
+    const messages = [
+      ...(history || []),
+      { role: 'user', content: context + (roData ? `\n\nRepair Order context:\n${roData}` : '') }
+    ];
+    return await performClaudeCall(system, messages);
+  }
+
+  throw new Error(`Unknown RO Copilot phase: ${phase}`);
 }

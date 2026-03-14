@@ -18,6 +18,7 @@ window.addEventListener('load', () => {
     document.getElementById('tile-vca')?.addEventListener('click', () => openTool('vca'));
     document.getElementById('tile-ama')?.addEventListener('click', () => { openTool('ama'); amaShowView('ama-customer-view'); });
     document.getElementById('tile-review')?.addEventListener('click', () => { openTool('ama'); amaShowView('ama-review-view'); });
+    document.getElementById('tile-roc')?.addEventListener('click', () => openTool('roc'));
     document.getElementById('tile-sod')?.addEventListener('click', () => openTool('sod'));
     document.getElementById('tile-moc')?.addEventListener('click', () => { mocOpen(); });
 
@@ -129,6 +130,9 @@ window.addEventListener('load', () => {
     // ── Initialize Scheduling Wizard ──
     initSchedulingWizard();
 
+    // ── Initialize RO Copilot ──
+    initRocWizard();
+
     // ── Initialize AMA ──
     initAMA();
 
@@ -146,6 +150,7 @@ const TOOL_META = {
     sw:     { icon: '', name: 'Appointment Copilot',        panel: 'tool-sw-content',  hiw: { title: 'Appointment Copilot', body: '<p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;">Books the next appointment directly into TekMetric in three steps: select date and time, choose services, then confirm.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;">When an RO is loaded, the Appointment Copilot uses the vehicle\'s service history to calculate the recommended interval and pre-populate the Preventive Maintenance and Repairs Recommendation predictive maintenance list.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;">Appointments are created with the title format: Appointment Copilot - [Customer Name] - [Year Make Model].</p>' } },
     vca:    { icon: '', name: 'Vehicle Consultant',         panel: 'tool-vca-content', hiw: { title: 'Vehicle Consultant Advisor', body: '<p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;">Generate three report types from TekMetric data: Customer Notes, Service Advisor Reports, and Exit Schedule Reports.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;">Powered by Cardinal Plaza Shell\'s Preventive Maintenance and Repairs Recommendation engine with T0 (today), T6 (6 months), and T12 (12 months) predictive time windows.</p>' } },
     ama:    { icon: '', name: 'Ask Me Anything',             panel: 'tool-ama-content', hiw: { title: 'Ask Me Anything', body: '<p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Customer Question mode:</strong> In-person or phone — answer questions, overcome objections, and help customers decide. Vehicle context from the loaded RO is automatically included.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Google Review mode:</strong> Craft professional, warm responses to positive or negative Google reviews in Cardinal Plaza Shell\'s voice.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;">Use the length and detail chips to refine, or type a follow-up in the chat thread to adjust tone.</p>' } },
+    roc:    { icon: '', name: 'RO Copilot',                  panel: 'tool-roc-content', hiw: { title: 'RO Copilot', body: '<p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Phase 1 — Write-Up:</strong> Document concerns, confirm vehicle info, assign tech. AI assist helps phrase vague concerns in professional automotive language.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Phase 2 — Findings Ready:</strong> Tech has the car and is performing the DVI. Checklist keeps you on track. Generates a status script if the customer calls.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Phase 3 — Estimate Build:</strong> Review all services on the RO. Claude reviews your estimate for gaps, missing descriptions, and items customers commonly question.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Phase 4 — Present &amp; Sell:</strong> Generate a full phone script for the estimate call, track approvals, and mark the sale when done.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;"><strong>Phase 5 — Post-Sale Support:</strong> Handles the unexpected — customer changes, tech findings, parts delays, unhappy customers. Describe the situation and get coaching on what to do.</p>' } },
     sod:    { icon: '', name: 'Service Offering Developer',  panel: 'tool-sod-content', hiw: { title: 'Service Offering Developer', body: '<p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Develop New Service:</strong> An AI-guided conversation helps you define a new service offering — including what\'s included, time estimates, recommended frequency, and target vehicles.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px;"><strong>Create Marketing Materials:</strong> Generate customer-ready descriptions, marketing copy, advisor training, and operational checklists for any existing service.</p><p style="font-size:12px;color:#4a5568;line-height:1.65;">All materials are written in Cardinal Plaza Shell\'s calm, educational voice.</p>' } },
 };
 
@@ -1798,9 +1803,13 @@ function tmLoadRO(data) {
     const kaPill = document.getElementById('ka-vehicle-pill');
     const kaTxt  = document.getElementById('ka-vehicle-pill-text');
     if (kaPill && kaTxt) { kaTxt.textContent = `${data.summary.vehicle}${data.summary.odometer ? ' · ' + data.summary.odometer : ''}`; kaPill.classList.add('active'); }
+    const rocPill = document.getElementById('roc-vehicle-pill');
+    const rocTxt  = document.getElementById('roc-vehicle-text');
+    if (rocPill && rocTxt) { rocTxt.textContent = `${data.summary.vehicle} · RO #${data.summary.roNumber}`; rocPill.classList.add('active'); }
 
     // Auto-populate whichever tool is currently active
     tmPopulateActiveTab();
+    rocUpdateFromTM();
 }
 
 function tmPopulateActiveTab() {
@@ -1810,12 +1819,13 @@ function tmPopulateActiveTab() {
     if (activeTool === 'sw' && lastRoId && swLoadingRoId !== lastRoId && !(swRoData?.roId === lastRoId && swServicesRendered)) {
         swLoadRO(lastRoId);
     }
+    if (activeTool === 'roc') rocUpdateFromTM();
 }
 
 function tmClearLoaded() {
     tmLoadedData = null;
     document.getElementById('tm-banner').classList.remove('active');
-    ['vca-vehicle-pill','sw-vehicle-pill','ama-vehicle-pill','ka-vehicle-pill'].forEach(id => {
+    ['vca-vehicle-pill','sw-vehicle-pill','ama-vehicle-pill','ka-vehicle-pill','roc-vehicle-pill'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
     });
@@ -3024,4 +3034,290 @@ Your role:
   }
 
   document.getElementById('moc-send').disabled = false;
+}
+
+// ==================== RO COPILOT ====================
+
+let rocCurrentPhase = 1;
+let rocP5History    = [];
+let rocP5Loading    = false;
+
+function initRocWizard() {
+    // ── Navigation ──
+    document.getElementById('roc-p1-continue')?.addEventListener('click', () => rocGoToPhase(2));
+    document.getElementById('roc-p2-back')    ?.addEventListener('click', () => rocGoToPhase(1));
+    document.getElementById('roc-p2-continue')?.addEventListener('click', () => rocGoToPhase(3));
+    document.getElementById('roc-p3-back')    ?.addEventListener('click', () => rocGoToPhase(2));
+    document.getElementById('roc-p3-continue')?.addEventListener('click', () => rocGoToPhase(4));
+    document.getElementById('roc-p4-back')    ?.addEventListener('click', () => rocGoToPhase(3));
+    document.getElementById('roc-p4-sold')    ?.addEventListener('click', rocMarkSold);
+    document.getElementById('roc-goto-p5')    ?.addEventListener('click', () => rocGoToPhase(5));
+    document.getElementById('roc-p5-back')    ?.addEventListener('click', () => rocGoToPhase(4));
+    document.getElementById('roc-restart')    ?.addEventListener('click', rocRestart);
+    document.getElementById('roc-restart-p5') ?.addEventListener('click', rocRestart);
+
+    // ── Checklist items ──
+    document.querySelectorAll('.roc-check-item').forEach(item => {
+        item.addEventListener('click', function (e) {
+            if (e.target.tagName === 'INPUT') return; // let native checkbox handle it
+            const cb = this.querySelector('input[type="checkbox"]');
+            if (cb) { cb.checked = !cb.checked; this.classList.toggle('checked', cb.checked); }
+        });
+        const cb = item.querySelector('input[type="checkbox"]');
+        cb?.addEventListener('change', function () {
+            item.classList.toggle('checked', this.checked);
+        });
+    });
+
+    // ── AI Assist buttons ──
+    document.getElementById('roc-p1-assist-btn')?.addEventListener('click', rocP1Assist);
+    document.getElementById('roc-p2-assist-btn')?.addEventListener('click', rocP2Assist);
+    document.getElementById('roc-p3-assist-btn')?.addEventListener('click', rocP3Assist);
+    document.getElementById('roc-p4-assist-btn')?.addEventListener('click', rocP4Assist);
+
+    // ── Phase 5 chat ──
+    document.getElementById('roc-p5-send')?.addEventListener('click', rocP5Send);
+    document.getElementById('roc-p5-input')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); rocP5Send(); }
+    });
+    document.querySelectorAll('.roc-chip').forEach(chip => {
+        chip.addEventListener('click', function () {
+            const input = document.getElementById('roc-p5-input');
+            if (input) { input.value = this.dataset.prompt || this.textContent.trim(); input.focus(); }
+        });
+    });
+
+    // ── Populate if RO already loaded ──
+    if (tmLoadedData) rocUpdateFromTM();
+}
+
+function rocGoToPhase(n) {
+    rocCurrentPhase = n;
+    for (let i = 1; i <= 5; i++) {
+        const ind    = document.getElementById(`roc-phase-ind-${i}`);
+        const screen = document.getElementById(`roc-screen-${i}`);
+        if (!ind || !screen) continue;
+        ind.classList.remove('active', 'complete');
+        screen.classList.remove('active');
+        if (i < n)      ind.classList.add('complete');
+        else if (i === n) { ind.classList.add('active'); screen.classList.add('active'); }
+    }
+    if (n === 3) rocPopulateJobs();
+    if (n === 4) { rocPopulateJobs(); rocPopulateApprovals(); }
+}
+
+function rocUpdateFromTM() {
+    rocPopulateConcerns();
+    if (rocCurrentPhase === 3) rocPopulateJobs();
+    if (rocCurrentPhase === 4) rocPopulateApprovals();
+}
+
+// ── Parse helpers ──
+
+function rocParseJobs() {
+    if (!tmLoadedData?.formatted) return [];
+    const formatted = tmLoadedData.formatted;
+    const match = formatted.match(/--- SERVICES PERFORMED ---\n([\s\S]*?)(?:\n---|$)/);
+    if (!match) return [];
+    // Split on numbered lines: "  1. Name [STATUS]"
+    const blocks = match[1].trim().split(/\n(?=  \d+\. )/);
+    return blocks.map(block => {
+        const firstLine  = block.split('\n')[0].trim();
+        const nameMatch  = firstLine.match(/^\d+\.\s+(.+?)(?:\s+\[(APPROVED|DECLINED)\])?$/);
+        const name       = nameMatch ? nameMatch[1].trim() : firstLine.replace(/^\d+\.\s*/, '').trim();
+        const rawStatus  = nameMatch?.[2]?.toLowerCase() || 'pending';
+        return { name, status: rawStatus };
+    }).filter(j => j.name);
+}
+
+function rocPopulateConcerns() {
+    const el = document.getElementById('roc-concerns-list');
+    if (!el) return;
+    if (!tmLoadedData?.formatted) {
+        el.innerHTML = '<p class="roc-no-ro-note">Open a Repair Order in TekMetric to see customer concerns.</p>';
+        return;
+    }
+    const match = tmLoadedData.formatted.match(/--- CLIENT CONCERNS ---\n([\s\S]*?)\n---/);
+    const lines = match
+        ? match[1].trim().split('\n').map(l => l.replace(/^[\s•\-]+/, '').trim()).filter(l => l && l !== 'See services performed')
+        : [];
+    if (lines.length === 0) {
+        el.innerHTML = '<p class="roc-no-ro-note">No customer concerns found on this RO yet.</p>';
+        return;
+    }
+    el.innerHTML = lines.map(l =>
+        `<div class="roc-job-row"><span class="roc-job-name">${l}</span></div>`
+    ).join('');
+}
+
+function rocPopulateJobs() {
+    const el = document.getElementById('roc-jobs-list');
+    if (!el) return;
+    const jobs = rocParseJobs();
+    if (jobs.length === 0) {
+        el.innerHTML = '<p class="roc-no-ro-note">' + (tmLoadedData ? 'No services on this RO yet.' : 'No RO loaded.') + '</p>';
+        return;
+    }
+    el.innerHTML = jobs.map(j =>
+        `<div class="roc-job-row ${j.status !== 'pending' ? j.status : ''}">
+            <span class="roc-job-name">${j.name}</span>
+            <span class="roc-job-status ${j.status}">${j.status === 'approved' ? 'Approved' : j.status === 'declined' ? 'Declined' : 'Pending'}</span>
+        </div>`
+    ).join('');
+}
+
+function rocPopulateApprovals() {
+    const el = document.getElementById('roc-approval-list');
+    if (!el) return;
+    const jobs = rocParseJobs();
+    if (jobs.length === 0) {
+        el.innerHTML = '<p class="roc-no-ro-note">' + (tmLoadedData ? 'No services on this RO yet.' : 'No RO loaded.') + '</p>';
+        return;
+    }
+    el.innerHTML = jobs.map((j, i) =>
+        `<div class="roc-approval-row" id="roc-appr-${i}" data-status="${j.status}">
+            <span class="roc-job-name">${j.name}</span>
+            <div class="roc-approval-btns">
+                <button class="roc-approve-btn${j.status === 'approved' ? ' selected' : ''}" onclick="rocSetApproval(${i},'approved')" type="button">✓ Yes</button>
+                <button class="roc-decline-btn${j.status === 'declined' ? ' selected' : ''}" onclick="rocSetApproval(${i},'declined')" type="button">✗ No</button>
+            </div>
+        </div>`
+    ).join('');
+}
+
+function rocSetApproval(idx, status) {
+    const row = document.getElementById(`roc-appr-${idx}`);
+    if (!row) return;
+    row.dataset.status = status;
+    row.querySelectorAll('.roc-approve-btn, .roc-decline-btn').forEach(b => b.classList.remove('selected'));
+    row.querySelector(`.roc-${status === 'approved' ? 'approve' : 'decline'}-btn`)?.classList.add('selected');
+}
+
+// ── Sale / Restart ──
+
+function rocMarkSold() {
+    const main    = document.getElementById('roc-p4-main');
+    const success = document.getElementById('roc-p4-success');
+    if (main)    main.style.display    = 'none';
+    if (success) success.style.display = 'block';
+    document.getElementById('roc-phase-ind-4')?.classList.replace('active', 'complete');
+}
+
+function rocRestart() {
+    rocCurrentPhase = 1;
+    rocP5History    = [];
+    const history   = document.getElementById('roc-p5-history');
+    if (history) history.innerHTML = '';
+    document.querySelectorAll('.roc-check-item').forEach(item => {
+        item.classList.remove('checked');
+        const cb = item.querySelector('input');
+        if (cb) cb.checked = false;
+    });
+    document.querySelectorAll('.roc-assist-box').forEach(box => box.classList.remove('active'));
+    const main    = document.getElementById('roc-p4-main');
+    const success = document.getElementById('roc-p4-success');
+    if (main)    main.style.display    = 'block';
+    if (success) success.style.display = 'none';
+    rocGoToPhase(1);
+}
+
+// ── Message helper ──
+
+function rocSend(payload) {
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(payload, response => {
+            if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+            if (response?.success) resolve(response.data);
+            else reject(new Error(response?.error || 'Unknown error'));
+        });
+    });
+}
+
+// ── Phase assist handlers ──
+
+async function rocRunAssist(phase, context, btnId, boxId, textId, loadingLabel, idleLabel) {
+    const btn  = document.getElementById(btnId);
+    const box  = document.getElementById(boxId);
+    const text = document.getElementById(textId);
+    if (!btn || !box || !text) return;
+    btn.disabled = true; btn.textContent = loadingLabel;
+    box.classList.add('active');
+    text.textContent = '…';
+    try {
+        const result = await rocSend({
+            action: 'asc_rocAssist',
+            phase,
+            roData:  tmLoadedData?.formatted || '',
+            context: context || ''
+        });
+        text.textContent = result;
+    } catch {
+        text.textContent = 'Could not generate assist. Please try again.';
+    }
+    btn.disabled = false; btn.textContent = idleLabel;
+}
+
+function rocP1Assist() {
+    const input = document.getElementById('roc-p1-concern-input')?.value?.trim();
+    if (!input) return;
+    rocRunAssist(1, input, 'roc-p1-assist-btn', 'roc-p1-assist-box', 'roc-p1-assist-text', 'Improving…', 'Improve Phrasing');
+}
+function rocP2Assist() {
+    rocRunAssist(2, '', 'roc-p2-assist-btn', 'roc-p2-assist-box', 'roc-p2-assist-text', 'Generating…', 'Generate Status Script');
+}
+function rocP3Assist() {
+    if (!tmLoadedData) return;
+    rocRunAssist(3, '', 'roc-p3-assist-btn', 'roc-p3-assist-box', 'roc-p3-assist-text', 'Reviewing…', 'Review My Estimate');
+}
+function rocP4Assist() {
+    if (!tmLoadedData) return;
+    rocRunAssist(4, '', 'roc-p4-assist-btn', 'roc-p4-assist-box', 'roc-p4-assist-text', 'Writing Script…', 'Generate Call Script');
+}
+
+// ── Phase 5 chat ──
+
+async function rocP5Send() {
+    const input = document.getElementById('roc-p5-input');
+    const msg   = input?.value?.trim();
+    if (!msg || rocP5Loading) return;
+    input.value = '';
+    rocP5Loading = true;
+    document.getElementById('roc-p5-send').disabled = true;
+
+    rocP5History.push({ role: 'user', content: msg });
+    rocRenderChat();
+
+    const historyEl = document.getElementById('roc-p5-history');
+    const typing    = document.createElement('div');
+    typing.className = 'roc-chat-bubble assistant';
+    typing.textContent = '…';
+    historyEl?.appendChild(typing);
+    historyEl?.scrollTo(0, historyEl.scrollHeight);
+
+    try {
+        const result = await rocSend({
+            action:  'asc_rocAssist',
+            phase:   5,
+            roData:  tmLoadedData?.formatted || '',
+            context: msg,
+            history: rocP5History.slice(0, -1)
+        });
+        rocP5History.push({ role: 'assistant', content: result });
+    } catch {
+        rocP5History.push({ role: 'assistant', content: 'Something went wrong. Please try again.' });
+    }
+
+    typing.remove();
+    rocRenderChat();
+    rocP5Loading = false;
+    document.getElementById('roc-p5-send').disabled = false;
+}
+
+function rocRenderChat() {
+    const el = document.getElementById('roc-p5-history');
+    if (!el) return;
+    el.innerHTML = rocP5History.map(m =>
+        `<div class="roc-chat-bubble ${m.role}">${m.content.replace(/\n/g, '<br>')}</div>`
+    ).join('');
+    el.scrollTo(0, el.scrollHeight);
 }
