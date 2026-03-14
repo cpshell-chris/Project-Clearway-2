@@ -139,6 +139,7 @@
     if (url !== lastUrl) {
       lastUrl = url;
       if (!PAYMENT_RE.test(url)) removeApptBtn();
+      if (INSPECTIONS_RE.test(url)) scheduleInspectionsScrape(url);
     }
     // Retry injection every tick while on payment page (handles React re-renders)
     if (PAYMENT_RE.test(url)) injectApptBtn();
@@ -146,4 +147,168 @@
 
   // Initial injection attempt
   if (PAYMENT_RE.test(window.location.href)) injectApptBtn();
+  if (INSPECTIONS_RE.test(window.location.href)) scheduleInspectionsScrape(window.location.href);
+
+  // ── DVI / Inspections capture ───────────────────────────────────
+  const INSPECTIONS_RE = /\/repair-orders\/(\d+)\/inspections(?:[/?#]|$)/i;
+
+  // Inject fetch interceptor into page context so we capture TekMetric's own
+  // internal API calls (runs in page world, bypassing content script isolation).
+  (function injectFetchInterceptor() {
+    if (document.getElementById('asc-fetch-interceptor')) return;
+    const s = document.createElement('script');
+    s.id = 'asc-fetch-interceptor';
+    s.textContent = `
+      (function() {
+        if (window.__ascFetchPatched) return;
+        window.__ascFetchPatched = true;
+        const _fetch = window.fetch.bind(window);
+        window.fetch = function(input, init) {
+          const url = typeof input === 'string' ? input : (input?.url || '');
+          const p = _fetch(input, init);
+          if (/\\/api\\/v1\\/(jobs|inspections|inspection|repair-order)/i.test(url)) {
+            p.then(res => res.clone().json().then(data => {
+              window.postMessage({ type: 'ASC_API_CAPTURE', url, data }, '*');
+            }).catch(() => {})).catch(() => {});
+          }
+          return p;
+        };
+      })();
+    `;
+    (document.head || document.documentElement).appendChild(s);
+  })();
+
+  // Listen for intercepted API responses posted from page context
+  window.addEventListener('message', (e) => {
+    if (e.source !== window || e.data?.type !== 'ASC_API_CAPTURE') return;
+    const url = e.data.url || '';
+    const data = e.data.data;
+    if (!data) return;
+
+    // TekMetric jobs API — contains inspection items alongside regular jobs
+    if (/\/api\/v1\/jobs/i.test(url) && (data.content || Array.isArray(data))) {
+      const jobs = Array.isArray(data) ? data : (data.content || []);
+      const inspectionJobs = jobs.filter(j =>
+        j.laborType?.name?.toLowerCase().includes('inspect') ||
+        j.categoryName?.toLowerCase().includes('inspect') ||
+        j.categoryName?.toLowerCase().includes('dvi') ||
+        j.type?.toLowerCase().includes('inspect') ||
+        j.jobType?.toLowerCase().includes('inspect')
+      );
+      // Also capture all jobs — the sidebar can filter further
+      if (jobs.length > 0) {
+        try {
+          chrome.runtime.sendMessage({
+            action: 'asc_dviCapture',
+            source: 'api',
+            roId: new URLSearchParams(url.split('?')[1] || '').get('repairOrderId'),
+            allJobs: jobs,
+            inspectionJobs
+          });
+        } catch (_) {}
+      }
+    }
+
+    // TekMetric inspections endpoint (if it exists separately)
+    if (/\/api\/v1\/inspection/i.test(url)) {
+      const items = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
+      if (items.length > 0) {
+        try {
+          chrome.runtime.sendMessage({
+            action: 'asc_dviCapture',
+            source: 'api',
+            roId: new URLSearchParams(url.split('?')[1] || '').get('repairOrderId'),
+            inspectionItems: items
+          });
+        } catch (_) {}
+      }
+    }
+  });
+
+  // DOM scraper — fallback when fetch interception doesn't yield inspection data
+  function scrapeInspectionsDom(roId) {
+    // Give React time to render (2s initial, 5s max)
+    const items = [];
+
+    // Common TekMetric inspection DOM patterns
+    const statusMap = {
+      red:    ['red', 'fail', 'danger', 'critical', 'urgent', '#e53e3e', '#f56565', '#c53030', 'rgb(229', 'rgb(245'],
+      yellow: ['yellow', 'warn', 'caution', 'amber', 'advisory', '#d69e2e', '#f6ad55', '#dd6b20', 'rgb(214', 'rgb(246', 'rgb(221'],
+      green:  ['green', 'pass', 'ok', 'good', 'success', '#38a169', '#68d391', '#2f855a', 'rgb(56', 'rgb(104', 'rgb(47']
+    };
+
+    function getStatusFromEl(el) {
+      const html = el.innerHTML.toLowerCase() + ' ' + el.className.toLowerCase();
+      const style = el.getAttribute('style') || '';
+      const combined = html + style;
+      if (statusMap.red.some(s => combined.includes(s))) return 'red';
+      if (statusMap.yellow.some(s => combined.includes(s))) return 'yellow';
+      if (statusMap.green.some(s => combined.includes(s))) return 'green';
+      return 'unknown';
+    }
+
+    // Strategy 1 — find rows/items in the inspections page
+    const rows = document.querySelectorAll(
+      '[class*="inspection-item"], [class*="InspectionItem"], [class*="inspection_item"], ' +
+      '[data-testid*="inspection"], [class*="checklist-item"], [class*="ChecklistItem"]'
+    );
+    rows.forEach(row => {
+      const name = row.querySelector('[class*="name"], [class*="label"], [class*="title"]')?.textContent?.trim()
+                || row.querySelector('span, p')?.textContent?.trim()
+                || row.textContent?.trim().split('\n')[0]?.trim();
+      const noteEl = row.querySelector('[class*="note"], [class*="comment"], [class*="tech"], textarea');
+      const note = noteEl?.textContent?.trim() || noteEl?.value?.trim() || '';
+      const status = getStatusFromEl(row);
+      if (name && name.length < 120) items.push({ name, status, note });
+    });
+
+    // Strategy 2 — look for any list-like structure on the page if strategy 1 found nothing
+    if (items.length === 0) {
+      const allText = document.body.innerText;
+      // Return raw text so Claude can interpret it
+      try {
+        chrome.runtime.sendMessage({
+          action: 'asc_dviCapture',
+          source: 'dom-text',
+          roId,
+          rawText: allText.substring(0, 8000)
+        });
+      } catch (_) {}
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage({
+        action: 'asc_dviCapture',
+        source: 'dom',
+        roId,
+        inspectionItems: items
+      });
+    } catch (_) {}
+  }
+
+  // Listen for sidebar-initiated scrape requests
+  chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+    if (request.action === 'asc_doScrapeInspections') {
+      const match = window.location.href.match(INSPECTIONS_RE);
+      if (match) {
+        scrapeInspectionsDom(match[1]);
+        sendResponse({ success: true, onPage: true });
+      } else {
+        sendResponse({ success: false, onPage: false });
+      }
+    }
+    return true;
+  });
+
+  // Auto-trigger when navigating to inspections tab
+  let scrapeTimer = null;
+  function scheduleInspectionsScrape(url) {
+    if (scrapeTimer) clearTimeout(scrapeTimer);
+    const match = url.match(INSPECTIONS_RE);
+    if (!match) return;
+    const roId = match[1];
+    // Wait 2.5s for React to render inspection items
+    scrapeTimer = setTimeout(() => scrapeInspectionsDom(roId), 2500);
+  }
 })();

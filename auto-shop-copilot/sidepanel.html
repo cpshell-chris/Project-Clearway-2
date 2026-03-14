@@ -494,6 +494,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .roc-chat-send-btn:hover { background: #EA6D0F; }
 .roc-chat-send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
 .roc-no-ro-note { font-size: 12px; color: #9ca3af; font-style: italic; padding: 8px 0; text-align: center; }
+.roc-dvi-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.roc-dvi-badge.red    { background: #fee2e2; color: #991b1b; }
+.roc-dvi-badge.yellow { background: #fef9c3; color: #854d0e; }
+.roc-dvi-badge.green  { background: #f1f5f9; color: #374151; }
+.roc-dvi-item { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 5px; border-left: 3px solid #dee2e6; }
+.roc-dvi-item.red    { border-left-color: #F97316; }
+.roc-dvi-item.yellow { border-left-color: #d97706; }
+.roc-dvi-item.green  { border-left-color: #9ca3af; opacity: 0.75; }
+.roc-dvi-item-name { font-size: 11px; font-weight: 600; color: #1e293b; flex: 1; line-height: 1.4; }
+.roc-dvi-item-note { font-size: 10px; color: #6c757d; margin-top: 2px; line-height: 1.4; }
 .roc-concern-input { width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 12px; outline: none; font-family: inherit; resize: none; margin-bottom: 8px; }
 .roc-concern-input:focus { border-color: #F97316; }
 .roc-restart-btn { background: white; border: 1.5px solid #FED7AA; color: #EA580C; border-radius: 8px; padding: 9px 16px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; width: 100%; transition: all 0.18s; }
@@ -982,12 +992,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 
       <!-- ── PHASE 2: FINDINGS READY ── -->
       <div class="sw-screen" id="roc-screen-2">
-        <div class="sw-card">
-          <div class="sw-section-label">DVI Status</div>
-          <div id="roc-dvi-status">
-            <p class="roc-no-ro-note">Waiting on technician to complete the Digital Vehicle Inspection.</p>
+
+        <!-- DVI capture status -->
+        <div class="sw-card" id="roc-dvi-card">
+          <div class="sw-section-label">Digital Vehicle Inspection</div>
+
+          <!-- Waiting state -->
+          <div id="roc-dvi-waiting">
+            <p style="font-size:12px;color:#6c757d;line-height:1.6;margin-bottom:10px;">Navigate to the <strong>Inspections tab</strong> in TekMetric — the DVI will capture automatically.</p>
+            <button class="roc-assist-btn" id="roc-dvi-refresh-btn" type="button" style="background:#6c757d;">Refresh / Capture Now</button>
+          </div>
+
+          <!-- DVI items loaded state -->
+          <div id="roc-dvi-loaded" style="display:none;">
+            <div id="roc-dvi-summary-row" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;"></div>
+            <div class="roc-jobs-wrap" id="roc-dvi-items-list"></div>
+            <button class="roc-assist-btn" id="roc-dvi-interpret-btn" type="button" style="margin-top:10px;">Interpret DVI for Me</button>
+            <div class="roc-assist-box" id="roc-dvi-assist-box">
+              <div class="roc-assist-text" id="roc-dvi-assist-text"></div>
+            </div>
           </div>
         </div>
+
         <div class="sw-card">
           <div class="sw-section-label">Checklist</div>
           <div class="roc-checklist">
@@ -1001,8 +1027,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
               <input type="checkbox" id="roc-cb-2-3"><label for="roc-cb-2-3">Additional services identified from DVI</label>
             </div>
           </div>
-          <div class="sw-section-label" style="margin-top:10px;">AI Assist</div>
-          <p style="font-size:11px;color:#6c757d;margin-bottom:8px;line-height:1.5;">Generate a script for if the customer calls while waiting on the DVI.</p>
+          <div class="sw-section-label" style="margin-top:10px;">If Customer Calls</div>
+          <p style="font-size:11px;color:#6c757d;margin-bottom:8px;line-height:1.5;">Generate a script for while the customer is waiting on DVI results.</p>
           <button class="roc-assist-btn" id="roc-p2-assist-btn" type="button">Generate Status Script</button>
           <div class="roc-assist-box" id="roc-p2-assist-box">
             <div class="roc-assist-text" id="roc-p2-assist-text"></div>

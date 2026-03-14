@@ -3037,6 +3037,7 @@ Your role:
 let rocCurrentPhase = 1;
 let rocP5History    = [];
 let rocP5Loading    = false;
+let rocDviPayload   = null;  // Latest captured DVI data for current RO
 
 function initRocWizard() {
     // ── Navigation ──
@@ -3064,6 +3065,10 @@ function initRocWizard() {
             item.classList.toggle('checked', this.checked);
         });
     });
+
+    // ── DVI buttons ──
+    document.getElementById('roc-dvi-refresh-btn')?.addEventListener('click', rocRequestDviScrape);
+    document.getElementById('roc-dvi-interpret-btn')?.addEventListener('click', rocInterpretDvi);
 
     // ── AI Assist buttons ──
     document.getElementById('roc-p1-assist-btn')?.addEventListener('click', rocP1Assist);
@@ -3098,11 +3103,19 @@ function rocGoToPhase(n) {
         if (i < n)      ind.classList.add('complete');
         else if (i === n) { ind.classList.add('active'); screen.classList.add('active'); }
     }
+    if (n === 2) rocLoadCachedDvi();
     if (n === 3) rocPopulateJobs();
     if (n === 4) { rocPopulateJobs(); rocPopulateApprovals(); }
 }
 
 function rocUpdateFromTM() {
+    // Reset DVI state when a new RO loads
+    rocDviPayload = null;
+    const waiting = document.getElementById('roc-dvi-waiting');
+    const loaded  = document.getElementById('roc-dvi-loaded');
+    if (waiting) waiting.style.display = 'block';
+    if (loaded)  loaded.style.display  = 'none';
+
     rocPopulateConcerns();
     rocAutoCheck();
     if (rocCurrentPhase === 3) rocPopulateJobs();
@@ -3348,4 +3361,145 @@ function rocRenderChat() {
         `<div class="roc-chat-bubble ${m.role}">${m.content.replace(/\n/g, '<br>')}</div>`
     ).join('');
     el.scrollTo(0, el.scrollHeight);
+}
+
+// ── DVI capture & display ──
+
+// Listen for live DVI data pushed from background (content script → background → here)
+chrome.runtime.onMessage.addListener((request) => {
+    if (request.action === 'asc_dviReady') {
+        rocDviPayload = request.payload;
+        rocRenderDvi();
+        // Auto-check "DVI findings received" if we're in Phase 2
+        rocSetCheck('roc-cb-2-2', true);
+    }
+});
+
+// When Phase 2 becomes active, try to load cached DVI for current RO
+function rocLoadCachedDvi() {
+    if (!lastRoId) return;
+    chrome.runtime.sendMessage({ action: 'asc_getDviCache', roId: lastRoId }, response => {
+        if (response?.success && response.payload) {
+            rocDviPayload = response.payload;
+            rocRenderDvi();
+            rocSetCheck('roc-cb-2-2', true);
+        }
+    });
+}
+
+function rocRequestDviScrape() {
+    const btn = document.getElementById('roc-dvi-refresh-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Capturing…'; }
+    chrome.runtime.sendMessage({ action: 'asc_requestDviScrape' }, response => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Refresh / Capture Now'; }
+        if (!response?.success || !response?.onPage) {
+            // SA isn't on the Inspections tab
+            const waiting = document.getElementById('roc-dvi-waiting');
+            if (waiting) {
+                const note = waiting.querySelector('p');
+                if (note) note.innerHTML = 'Not on the Inspections tab. Navigate there in TekMetric, then come back and tap Refresh.';
+            }
+        }
+    });
+}
+
+function rocRenderDvi() {
+    const p = rocDviPayload;
+    if (!p) return;
+
+    const waiting = document.getElementById('roc-dvi-waiting');
+    const loaded  = document.getElementById('roc-dvi-loaded');
+    if (waiting) waiting.style.display = 'none';
+    if (loaded)  loaded.style.display  = 'block';
+
+    // Build items array from whichever source we have
+    let items = [];
+    if (p.inspectionItems?.length > 0) {
+        items = p.inspectionItems.map(i => ({
+            name:   i.name || i.label || i.description || 'Item',
+            status: rocNormalizeDviStatus(i.status || i.result || i.rating || ''),
+            note:   i.note || i.technicianNote || i.notes || i.cause || ''
+        }));
+    } else if (p.allJobs?.length > 0) {
+        items = p.allJobs.map(j => ({
+            name:   j.name || j.laborName || 'Item',
+            status: rocNormalizeDviStatus(j.status || (j.approved ? 'green' : j.declined ? 'red' : '')),
+            note:   [j.concern, j.cause, j.correction].filter(Boolean).join(' — ')
+        }));
+    }
+
+    // Summary badge row
+    const summaryRow = document.getElementById('roc-dvi-summary-row');
+    if (summaryRow && items.length > 0) {
+        const counts = { red: 0, yellow: 0, green: 0, unknown: 0 };
+        items.forEach(i => counts[i.status] = (counts[i.status] || 0) + 1);
+        summaryRow.innerHTML = [
+            counts.red    > 0 ? `<span class="roc-dvi-badge red">⚠ ${counts.red} Urgent</span>` : '',
+            counts.yellow > 0 ? `<span class="roc-dvi-badge yellow">● ${counts.yellow} Advisory</span>` : '',
+            counts.green  > 0 ? `<span class="roc-dvi-badge green">✓ ${counts.green} OK</span>` : '',
+        ].join('');
+    } else if (summaryRow && p.rawText) {
+        summaryRow.innerHTML = '<span class="roc-dvi-badge yellow">● Raw text captured — use Interpret to process</span>';
+    }
+
+    // Item list — red first, yellow second, green last
+    const listEl = document.getElementById('roc-dvi-items-list');
+    if (listEl) {
+        if (items.length > 0) {
+            const sorted = [
+                ...items.filter(i => i.status === 'red'),
+                ...items.filter(i => i.status === 'yellow'),
+                ...items.filter(i => i.status === 'green'),
+                ...items.filter(i => i.status === 'unknown'),
+            ];
+            listEl.innerHTML = sorted.map(i =>
+                `<div class="roc-dvi-item ${i.status}">
+                    <div>
+                        <div class="roc-dvi-item-name">${i.name}</div>
+                        ${i.note ? `<div class="roc-dvi-item-note">${i.note}</div>` : ''}
+                    </div>
+                </div>`
+            ).join('');
+        } else if (p.rawText) {
+            listEl.innerHTML = '<p style="font-size:11px;color:#6c757d;padding:6px 0;line-height:1.5;">DVI text captured. Tap <strong>Interpret DVI for Me</strong> to process.</p>';
+        }
+    }
+}
+
+function rocNormalizeDviStatus(raw) {
+    const s = (raw || '').toLowerCase();
+    if (/red|fail|danger|critical|urgent|immediate|no/.test(s))          return 'red';
+    if (/yellow|warn|caution|amber|advisory|monitor|soon|fair/.test(s))   return 'yellow';
+    if (/green|pass|ok|good|success|yes/.test(s))                         return 'green';
+    return 'unknown';
+}
+
+async function rocInterpretDvi() {
+    if (!rocDviPayload) return;
+    const btn  = document.getElementById('roc-dvi-interpret-btn');
+    const box  = document.getElementById('roc-dvi-assist-box');
+    const text = document.getElementById('roc-dvi-assist-text');
+    if (!btn || !box || !text) return;
+    btn.disabled = true; btn.textContent = 'Interpreting…';
+    box.classList.add('active');
+    text.textContent = 'Analyzing DVI findings…';
+    try {
+        const result = await new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage({
+                action:     'asc_interpretDvi',
+                dviPayload: rocDviPayload,
+                roData:     tmLoadedData?.formatted || ''
+            }, response => {
+                if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+                if (response?.success) resolve(response.data);
+                else reject(new Error(response?.error || 'Unknown error'));
+            });
+        });
+        text.textContent = result;
+        // Auto-check checklist item
+        rocSetCheck('roc-cb-2-3', true);
+    } catch {
+        text.textContent = 'Could not interpret DVI. Please try again.';
+    }
+    btn.disabled = false; btn.textContent = 'Interpret DVI for Me';
 }

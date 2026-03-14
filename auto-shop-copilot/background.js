@@ -131,6 +131,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // DVI data captured by content script — store it and forward to sidebar
+  if (request.action === 'asc_dviCapture') {
+    const roId = request.roId || 'unknown';
+    chrome.storage.session.set({ [`asc_dvi_${roId}`]: request }, () => {
+      // Forward to sidebar so Phase 2 updates live
+      chrome.runtime.sendMessage({ action: 'asc_dviReady', payload: request }).catch(() => {});
+    });
+    sendResponse({ success: true });
+    return true;
+  }
+
+  // Sidebar asks background to tell content script to scrape now
+  if (request.action === 'asc_requestDviScrape') {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      const tab = tabs[0];
+      if (!tab?.id) { sendResponse({ success: false, error: 'No active tab' }); return; }
+      chrome.tabs.sendMessage(tab.id, { action: 'asc_doScrapeInspections' }, res => {
+        sendResponse(res || { success: false, error: 'Content script did not respond' });
+      });
+    });
+    return true;
+  }
+
+  // Sidebar asks for any previously captured DVI for a given RO
+  if (request.action === 'asc_getDviCache') {
+    chrome.storage.session.get(`asc_dvi_${request.roId}`, result => {
+      const data = result[`asc_dvi_${request.roId}`];
+      sendResponse(data ? { success: true, payload: data } : { success: false });
+    });
+    return true;
+  }
+
+  // DVI interpretation via Claude
+  if (request.action === 'asc_interpretDvi') {
+    rocInterpretDvi(request.dviPayload, request.roData || '')
+      .then(r  => sendResponse({ success: true,  data: r }))
+      .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+
   return true;
 });
 
@@ -1432,4 +1472,63 @@ Format the script so it can be read directly. Use the calm, educational voice of
   }
 
   throw new Error(`Unknown RO Copilot phase: ${phase}`);
+}
+
+
+// ==================== DVI INTERPRETER ====================
+
+async function rocInterpretDvi(dviPayload, roData) {
+  const shop = 'Cardinal Plaza Shell';
+
+  // Build a clean text representation of the DVI data regardless of source
+  let dviText = '';
+
+  if (dviPayload.inspectionItems?.length > 0) {
+    dviText = dviPayload.inspectionItems.map(item => {
+      const status = item.status || item.result || item.rating || 'unknown';
+      const name   = item.name || item.label || item.description || 'Item';
+      const note   = item.note || item.technicianNote || item.notes || item.cause || '';
+      return `[${status.toUpperCase()}] ${name}${note ? ' — ' + note : ''}`;
+    }).join('\n');
+  } else if (dviPayload.allJobs?.length > 0) {
+    // Filter to likely inspection items and format them
+    dviText = dviPayload.allJobs.map(j => {
+      const name       = j.name || j.laborName || 'Item';
+      const status     = j.approved ? 'APPROVED' : j.declined ? 'DECLINED' : (j.status || 'PENDING');
+      const concern    = j.concern || j.complaint || '';
+      const cause      = j.cause || j.causeNote || j.technicianNote || '';
+      const correction = j.correction || j.correctionNote || '';
+      const parts      = [concern, cause, correction].filter(Boolean).join(' | ');
+      return `[${status}] ${name}${parts ? ' — ' + parts : ''}`;
+    }).join('\n');
+  } else if (dviPayload.rawText) {
+    dviText = dviPayload.rawText;
+  }
+
+  if (!dviText.trim()) throw new Error('No DVI data to interpret');
+
+  const system = `You are an experienced service advisor coach at ${shop}. The technician has completed the Digital Vehicle Inspection. Analyze the findings and produce a concise, actionable briefing for the service advisor.
+
+Format your response in these sections:
+
+**IMMEDIATE ACTION REQUIRED**
+Red/fail items that are safety concerns or will cause the vehicle to not function. For each: one line on what it is and why it matters to the customer. If none, say "None."
+
+**RECOMMEND THIS VISIT**
+Yellow/caution items worth presenting today. For each: one-line talking point. If none, say "None."
+
+**ADD TO ESTIMATE**
+List any items from the above that are NOT already on the estimate (based on the RO context provided). Be specific — include the item name exactly as it should appear on the RO.
+
+**HOW TO OPEN THE CONVERSATION**
+2–3 sentences the advisor can say to the customer to introduce the DVI results. Warm, educational, not alarming.
+
+**HEADS UP**
+Any patterns, related items, or things the advisor should know going into the customer call. Keep to 1–3 bullet points.
+
+Be direct and specific. Avoid generic statements. Use the customer's actual vehicle context.`;
+
+  const userMsg = `Here are the DVI findings:\n\n${dviText}${roData ? `\n\nRepair Order context:\n${roData}` : ''}`;
+
+  return await performClaudeCall(system, [{ role: 'user', content: userMsg }]);
 }
