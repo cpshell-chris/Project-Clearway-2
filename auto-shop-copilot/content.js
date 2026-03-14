@@ -7,6 +7,7 @@
   if (document.getElementById('asc-copilot-launcher')) return;
 
   const PAYMENT_RE = /\/repair-orders\/\d+\/payment(?:[/?#]|$)/i;
+  const INSPECTIONS_RE = /\/repair-orders\/(\d+)\/inspections?(?:[/?#]|$)/i;
 
   // ── Styles ─────────────────────────────────────────────────────
   const style = document.createElement('style');
@@ -150,7 +151,6 @@
   if (INSPECTIONS_RE.test(window.location.href)) scheduleInspectionsScrape(window.location.href);
 
   // ── DVI / Inspections capture ───────────────────────────────────
-  const INSPECTIONS_RE = /\/repair-orders\/(\d+)\/inspections?(?:[/?#]|$)/i;
 
   // Inject fetch interceptor into page context so we capture TekMetric's own
   // internal API calls (runs in page world, bypassing content script isolation).
