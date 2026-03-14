@@ -7,6 +7,18 @@ const ASC_SHOP_ID = '238';
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  chrome.contextMenus.create({
+    id: 'asc_openCopilot',
+    title: 'Open Auto Shop Copilot',
+    contexts: ['page'],
+    documentUrlPatterns: ['https://sandbox.tekmetric.com/*', 'https://shop.tekmetric.com/*']
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'asc_openCopilot' && tab?.windowId) {
+    chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
+  }
 });
 
 chrome.action.onClicked.addListener((tab) => {
@@ -17,8 +29,10 @@ chrome.action.onClicked.addListener((tab) => {
 // Listen for messages from the side panel AND content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
-  // Content script floating button — panel opens via action icon click (MV3 gesture restriction)
+  // Content script floating button → try to open side panel
   if (request.action === 'asc_openSidePanel') {
+    const windowId = sender.tab?.windowId;
+    if (windowId) chrome.sidePanel.open({ windowId }).catch(() => {});
     sendResponse({ success: true });
     return true;
   }
