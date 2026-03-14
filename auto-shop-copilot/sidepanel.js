@@ -1821,7 +1821,7 @@ function tmPopulateActiveTab() {
 function tmClearLoaded() {
     tmLoadedData = null;
     document.getElementById('tm-banner').classList.remove('active');
-    ['vca-vehicle-pill','sw-vehicle-pill','ama-vehicle-pill','ka-vehicle-pill','roc-vehicle-pill'].forEach(id => {
+    ['vca-vehicle-pill','sw-vehicle-pill','ama-vehicle-pill','ka-vehicle-pill'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
     });
