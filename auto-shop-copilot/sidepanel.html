@@ -445,8 +445,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .moc-clearq-btn { background: white; border: 1px solid #FED7AA; border-radius: 16px; padding: 4px 12px; font-size: 10.5px; font-family: sans-serif; font-weight: 600; color: #9A3412; cursor: pointer; transition: all 0.2s; }
 .moc-clearq-btn:hover { background: #FFEDD5; border-color: #EA580C; }
 /* ==================== RO COPILOT ==================== */
-.roc-vehicle-pill { display: none; align-items: center; gap: 6px; background: #fdf8f5; border: 1px solid #e8d5c4; border-radius: 20px; padding: 4px 12px; margin: 0 16px 10px; font-size: 11px; color: #8a6a58; font-weight: 500; }
-.roc-vehicle-pill.active { display: flex; }
+
 .roc-checklist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .roc-check-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #f8f9fa; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; user-select: none; }
 .roc-check-item:hover { background: #f1f5f9; }
@@ -943,12 +942,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
           <div class="sw-step-num">5</div>
           <div class="sw-step-lbl">Support</div>
         </div>
-      </div>
-
-      <!-- Vehicle pill (shared across all phases) -->
-      <div class="roc-vehicle-pill" id="roc-vehicle-pill">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M2 10l1.5-4h9L14 10"/><rect x="1" y="10" width="14" height="4" rx="1"/><circle cx="4.5" cy="14" r="1"/><circle cx="11.5" cy="14" r="1"/></svg>
-        <span id="roc-vehicle-text">No RO loaded</span>
       </div>
 
       <!-- ── PHASE 1: WRITE-UP ── -->
