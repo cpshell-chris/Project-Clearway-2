@@ -445,15 +445,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .moc-clearq-btn { background: white; border: 1px solid #FED7AA; border-radius: 16px; padding: 4px 12px; font-size: 10.5px; font-family: sans-serif; font-weight: 600; color: #9A3412; cursor: pointer; transition: all 0.2s; }
 .moc-clearq-btn:hover { background: #FFEDD5; border-color: #EA580C; }
 /* ==================== RO COPILOT ==================== */
-.roc-vehicle-pill { display: none; align-items: center; gap: 6px; background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 20px; padding: 4px 12px; margin: 0 16px 10px; font-size: 11px; color: #065f46; font-weight: 600; }
+.roc-vehicle-pill { display: none; align-items: center; gap: 6px; background: #fdf8f5; border: 1px solid #e8d5c4; border-radius: 20px; padding: 4px 12px; margin: 0 16px 10px; font-size: 11px; color: #8a6a58; font-weight: 500; }
 .roc-vehicle-pill.active { display: flex; }
 .roc-checklist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .roc-check-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #f8f9fa; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; user-select: none; }
 .roc-check-item:hover { background: #f1f5f9; }
-.roc-check-item.checked { background: #f0fdf4; border-color: #86efac; }
-.roc-check-item input[type="checkbox"] { width: 15px; height: 15px; accent-color: #16a34a; cursor: pointer; flex-shrink: 0; }
+.roc-check-item.checked { background: #FFF7ED; border-color: #FED7AA; }
+.roc-check-item input[type="checkbox"] { width: 15px; height: 15px; accent-color: #F97316; cursor: pointer; flex-shrink: 0; }
 .roc-check-item label { font-size: 12px; color: #374151; cursor: pointer; flex: 1; line-height: 1.4; }
-.roc-check-item.checked label { color: #166534; }
+.roc-check-item.checked label { color: #9A3412; }
 .roc-assist-btn { width: 100%; background: #1E293B; color: white; border: none; border-radius: 8px; padding: 11px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 4px; font-family: inherit; }
 .roc-assist-btn:hover { background: #0f172a; }
 .roc-assist-btn:disabled { background: #9ca3af; cursor: not-allowed; }
@@ -461,25 +461,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .roc-assist-box.active { display: block; }
 .roc-assist-text { font-size: 12px; color: #374151; line-height: 1.75; white-space: pre-wrap; }
 .roc-job-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 6px; border-left: 3px solid #dee2e6; }
-.roc-job-row.approved { border-left-color: #16a34a; }
-.roc-job-row.declined { border-left-color: #dc2626; opacity: 0.6; }
+.roc-job-row.approved { border-left-color: #F97316; }
+.roc-job-row.declined { border-left-color: #9ca3af; opacity: 0.7; }
 .roc-job-name { font-size: 12px; font-weight: 600; color: #1e293b; flex: 1; line-height: 1.4; }
 .roc-job-status { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
-.roc-job-status.approved { background: #dcfce7; color: #166534; }
-.roc-job-status.declined { background: #fee2e2; color: #991b1b; }
-.roc-job-status.pending { background: #fef9c3; color: #854d0e; }
+.roc-job-status.approved { background: #FFF7ED; color: #9A3412; }
+.roc-job-status.declined { background: #f1f5f9; color: #6c757d; }
+.roc-job-status.pending { background: #f1f5f9; color: #6c757d; }
 .roc-jobs-wrap { max-height: 180px; overflow-y: auto; margin-bottom: 4px; }
 .roc-approval-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 6px; }
 .roc-approval-btns { display: flex; gap: 5px; flex-shrink: 0; }
-.roc-approve-btn, .roc-decline-btn { padding: 4px 10px; border: 1.5px solid #d1d5db; background: white; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; }
-.roc-approve-btn:hover, .roc-approve-btn.selected { background: #dcfce7; border-color: #86efac; color: #166534; }
-.roc-decline-btn:hover, .roc-decline-btn.selected { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+.roc-approve-btn, .roc-decline-btn { padding: 4px 10px; border: 1.5px solid #d1d5db; background: white; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; color: #374151; }
+.roc-approve-btn:hover, .roc-approve-btn.selected { background: #FFF7ED; border-color: #F97316; color: #9A3412; }
+.roc-decline-btn:hover, .roc-decline-btn.selected { background: #f1f5f9; border-color: #9ca3af; color: #4b5563; }
 .roc-approval-wrap { max-height: 180px; overflow-y: auto; margin-bottom: 4px; }
-.roc-sold-btn { width: 100%; background: #16a34a; color: white; border: none; border-radius: 8px; padding: 13px 16px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; letter-spacing: 0.02em; font-family: inherit; }
-.roc-sold-btn:hover { background: #15803d; }
+.roc-sold-btn { width: 100%; background: #F97316; color: white; border: none; border-radius: 8px; padding: 13px 16px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; letter-spacing: 0.02em; font-family: inherit; }
+.roc-sold-btn:hover { background: #EA6D0F; }
 .roc-success-box { text-align: center; padding: 20px 16px; display: none; }
 .roc-success-icon { margin-bottom: 10px; }
-.roc-success-title { font-size: 17px; font-weight: 700; color: #166534; margin-bottom: 6px; }
+.roc-success-title { font-size: 17px; font-weight: 700; color: #1E293B; margin-bottom: 6px; }
 .roc-success-sub { font-size: 12px; color: #6c757d; margin-bottom: 16px; line-height: 1.5; }
 .roc-p5-history { max-height: 230px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px 0; margin-bottom: 10px; }
 .roc-chat-bubble { padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.65; }
@@ -1101,7 +1101,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
         <!-- Success state -->
         <div class="roc-success-box" id="roc-p4-success">
           <div class="roc-success-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="#16a34a" stroke-width="2.5" width="44" height="44"><circle cx="20" cy="20" r="17"/><path d="M11 20l6 6 12-12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="#F97316" stroke-width="2.5" width="44" height="44"><circle cx="20" cy="20" r="17"/><path d="M11 20l6 6 12-12"/></svg>
           </div>
           <div class="roc-success-title">Sale Made!</div>
           <div class="roc-success-sub">The tech has what they need. If anything comes up after the sale, use Phase 5 below.</div>
