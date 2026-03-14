@@ -133,6 +133,16 @@
     document.getElementById('asc-appt-btn')?.remove();
   }
 
+  // ── Inspections scrape scheduler ────────────────────────────────
+  let scrapeTimer = null;
+  function scheduleInspectionsScrape(url) {
+    if (scrapeTimer) clearTimeout(scrapeTimer);
+    const match = url.match(INSPECTIONS_RE);
+    if (!match) return;
+    const roId = match[1];
+    scrapeTimer = setTimeout(() => scrapeInspectionsDom(roId), 2500);
+  }
+
   // ── SPA URL monitoring + DOM retry loop ────────────────────────
   let lastUrl = window.location.href;
   setInterval(() => {
@@ -301,14 +311,4 @@
     return true;
   });
 
-  // Auto-trigger when navigating to inspections tab
-  let scrapeTimer = null;
-  function scheduleInspectionsScrape(url) {
-    if (scrapeTimer) clearTimeout(scrapeTimer);
-    const match = url.match(INSPECTIONS_RE);
-    if (!match) return;
-    const roId = match[1];
-    // Wait 2.5s for React to render inspection items
-    scrapeTimer = setTimeout(() => scrapeInspectionsDom(roId), 2500);
-  }
-})();
+})();;
