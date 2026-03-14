@@ -168,23 +168,7 @@
     if (document.getElementById('asc-fetch-interceptor')) return;
     const s = document.createElement('script');
     s.id = 'asc-fetch-interceptor';
-    s.textContent = `
-      (function() {
-        if (window.__ascFetchPatched) return;
-        window.__ascFetchPatched = true;
-        const _fetch = window.fetch.bind(window);
-        window.fetch = function(input, init) {
-          const url = typeof input === 'string' ? input : (input?.url || '');
-          const p = _fetch(input, init);
-          if (/\\/api\\/v1\\/(jobs|inspections|inspection|repair-order)/i.test(url)) {
-            p.then(res => res.clone().json().then(data => {
-              window.postMessage({ type: 'ASC_API_CAPTURE', url, data }, '*');
-            }).catch(() => {})).catch(() => {});
-          }
-          return p;
-        };
-      })();
-    `;
+    s.src = chrome.runtime.getURL('page-fetch-interceptor.js');
     (document.head || document.documentElement).appendChild(s);
   })();
 
