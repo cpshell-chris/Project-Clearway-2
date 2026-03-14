@@ -5,29 +5,20 @@
 const ASC_CLOUD_RUN_URL = 'https://advance-appointment-service-361478515851.us-east4.run.app';
 const ASC_SHOP_ID = '238';
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+});
+
 chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ windowId: tab.windowId });
+  chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
 });
 
 
 // Listen for messages from the side panel AND content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
-  // Content script floating button → open side panel
+  // Content script floating button — panel opens via action icon click (MV3 gesture restriction)
   if (request.action === 'asc_openSidePanel') {
-    const tabId    = sender.tab?.id;
-    const windowId = sender.tab?.windowId;
-    console.log('[ASC] openSidePanel received, tabId:', tabId, 'windowId:', windowId);
-    if (tabId) {
-      chrome.sidePanel.open({ tabId }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('[ASC] sidePanel.open error:', chrome.runtime.lastError.message);
-          if (windowId) chrome.sidePanel.open({ windowId });
-        } else {
-          console.log('[ASC] Side panel opened successfully');
-        }
-      });
-    }
     sendResponse({ success: true });
     return true;
   }
