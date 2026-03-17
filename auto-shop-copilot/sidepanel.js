@@ -163,7 +163,7 @@ function openTool(toolKey) {
     document.getElementById('tool-header-name').textContent  = meta.name;
 
     // Show correct panel
-    ['tool-ka-content','tool-sw-content','tool-vca-content','tool-ama-content','tool-sod-content'].forEach(id => {
+    ['tool-ka-content','tool-sw-content','tool-vca-content','tool-ama-content','tool-sod-content','tool-roc-content'].forEach(id => {
         const el = document.getElementById(id); if(el) el.style.display='none';
     });
     const tp = document.getElementById(meta.panel); if(tp) tp.style.display='block';
