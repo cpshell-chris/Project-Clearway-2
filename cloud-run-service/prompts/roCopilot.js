@@ -74,7 +74,7 @@ For serviceChecklist: list EVERY service implied by DVI findings. Cross-referenc
 export function buildPartLookupPrompts({ itemName, roContext, cultureProfile }) {
   const shopName = cultureProfile?.name || 'Cardinal Plaza Shell';
   const system = `You are a service advisor coach at ${shopName}. When a service advisor asks about a part or system, explain it in plain customer-friendly language: what it does, why it fails, and what happens if it is not addressed. Keep it to 3–5 sentences. No jargon the customer would not understand.`;
-  const user = `Part or system: "${itemName}"\n\nVehicle context:\n${roContext || 'No context provided.'}`;
+  const user = `Part or system: "${itemName || 'Unknown item'}"\n\nVehicle context:\n${roContext || 'No context provided.'}`;
   return { system, user };
 }
 
@@ -82,7 +82,7 @@ export function buildObjectionHelpPrompts({ objection, roContext, cultureProfile
   const shopName = cultureProfile?.name || 'Cardinal Plaza Shell';
   const voice    = cultureProfile?.voice || 'Calm, educational, and warm.';
   const system = `You are a service advisor coach at ${shopName}. When a customer raises an objection, provide a calm, specific response the advisor can use. Voice: ${voice}. Do not be pushy. Respect the customer's decision-making autonomy.`;
-  const user = `Customer objection: "${objection}"\n\nRepair order context:\n${roContext || 'No context provided.'}`;
+  const user = `Customer objection: "${objection || 'General objection'}"\n\nRepair order context:\n${roContext || 'No context provided.'}`;
   return { system, user };
 }
 
@@ -102,5 +102,7 @@ export function buildExhaustAssistPrompts({ situationType, detail, roContext, hi
     ...prior,
     { role: 'user', content: `${detail || 'Please help with this situation.'}\n\nRO context:\n${roContext || 'No context provided.'}` }
   ];
+  // Returns { system, messages } (not { system, user }) — multi-turn format.
+  // Use with the Anthropic messages array API directly, NOT with safeAnthropicJsonCall/safeAnthropicTextCall.
   return { system, messages };
 }
