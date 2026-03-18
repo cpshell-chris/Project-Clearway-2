@@ -63,7 +63,7 @@ The four steps are: **Intake → Compression → Combustion → Exhaust.**
   - Tires (all 4 corners) — photo required
   - Fluids — color and level
   - Filters (engine + cabin) — photo if dirty
-  - (list is hardcoded for now; configurable via culture profile in a future iteration — see Open Question #4)
+  - (list is defined in the shop's culture profile in `cultureProfiles.js` — each entry specifies `{ name, photoRequired: true|false|'if-dirty', note }` — not hardcoded)
 - A note: *"When the tech submits the DVI, tap below to import all findings and move to Combustion."*
 - **Full-width primary button:** "DVI Complete — Import & Continue"
 
@@ -212,4 +212,4 @@ Stored in `chrome.storage.session` (tab-scoped, clears on browser restart), keye
 1. **TekMetric write-back scope** — which fields does the TekMetric API actually allow writing? (customer address, contact preference, new RO jobs) Must be confirmed against live API docs before any write-back code is written. UI copy is intentionally conditional pending this confirmation.
 2. **DVI DOM structure** — exact CSS selectors for the TekMetric inspection page must be mapped against both sandbox and production environments before the DOM scraper is written. Fetch interception is the primary path; DOM scrape is the fallback.
 3. **RO Readiness scoring** — the 4-factor equal-weight formula defined above is a starting point. Weighting may be adjusted during implementation based on real-world advisor feedback.
-4. **DVI photo prompts** — the Compression checklist items and photo requirements are hardcoded defaults for now. A future iteration will make them configurable per shop via the culture profile in `cultureProfiles.js`.
+4. **DVI photo prompts** — the Compression checklist items and photo requirements are defined in `cultureProfiles.js` per shop from day one, using the schema `{ name, photoRequired: true|false|'if-dirty', note }`. The current Cardinal Plaza Shell profile will need this `dviChecklist` array added as part of implementation.
