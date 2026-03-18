@@ -453,10 +453,14 @@
   The sidebar's `startURLMonitoring()` already auto-fetches the RO when detected. The content.js message is used for auto-launching the ROC tool when the sidebar is open. Add this inside the URL change block in the `setInterval`:
 
   ```js
-  // Detect generic RO URL and notify sidebar (add after existing INSPECTIONS_RE check)
+  // Detect generic RO URL and notify sidebar.
+  // IMPORTANT: guard against inspection and payment sub-pages — the inspection page
+  // also matches /repair-orders/\d+, so without this guard, navigating to the
+  // Inspections tab during Compression would re-fire asc_roDetected → openTool('roc')
+  // → rocOnOpen() → reset session back to Intake, discarding the advisor's progress.
   const ROC_RE = /\/repair-orders\/(\d+)/;
   const rocMatch = url.match(ROC_RE);
-  if (rocMatch && !PAYMENT_RE.test(url)) {
+  if (rocMatch && !PAYMENT_RE.test(url) && !INSPECTIONS_RE.test(url)) {
     try {
       chrome.runtime.sendMessage({ action: 'asc_roDetected', roNumber: rocMatch[1] });
     } catch (_) {}
@@ -1378,8 +1382,9 @@ Add the Intake step population and write-back functions. Append to the ROC secti
     rocState.intakeVerification.concern = hasConcern;
     rocSetVerify('concern', hasConcern, 'OK', 'Missing');
 
-    // Phone
-    const hasPhone = !!(s.hasPhone || s.hasEmail);
+    // Phone — check phone ONLY; do not substitute email.
+    // The spec requires a phone number specifically (for the Call/Text preference selector).
+    const hasPhone = !!s.hasPhone;
     rocState.intakeVerification.phone = hasPhone;
     rocSetVerify('phone', hasPhone, 'On file', 'Tap to add', hasPhone ? null : 'phone');
 
