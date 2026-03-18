@@ -1366,7 +1366,9 @@ ${jobs.map((job,i) => `Job ${i+1}: ${JSON.stringify(job)}`).join('\n')}
       hasPhone:     phone !== 'N/A' && !!phone,
       hasEmail:     email !== 'N/A' && !!email,
       hasTech:      jobs.some(j => j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName)),
-      concernsList  // raw array — used by RO Copilot for display and auto-check
+      concernsList, // raw array — used by RO Copilot for display and auto-check
+      customerId:   customer.id || null,
+      shopId:       ro.shopId || ro.shop?.id || null
     }
   };
 }
