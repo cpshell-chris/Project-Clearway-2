@@ -4,7 +4,11 @@ import {
   buildRoCopilotSummaryPrompt,
   buildRoCopilotSummarySystemPrompt,
   buildRoCopilotQuestionPrompt,
-  buildRoCopilotQuestionSystemPrompt
+  buildRoCopilotQuestionSystemPrompt,
+  buildInterpretDviPrompts,
+  buildPartLookupPrompts,
+  buildObjectionHelpPrompts,
+  buildExhaustAssistPrompts
 } from "./prompts/roCopilot.js";
 import { buildAISystemPrompt } from "./prompts/aiChat.js";
 
@@ -1315,6 +1319,33 @@ async function safeAnthropicJsonCall({ systemPrompt, userPrompt, maxTokens = 160
   }
 }
 
+async function safeAnthropicTextCall({ systemPrompt, messages, maxTokens = 600 }) {
+  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+  if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+  const fetch = getFetch();
+  // NOTE: modelFallbacks tries each model in order. We continue to the next model
+  // ONLY on 404 (model not found). All other errors (5xx, 429, etc.) stop immediately.
+  const modelFallbacks = [process.env.ANTHROPIC_MODEL?.trim(), 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'].filter(Boolean);
+  let lastError = null;
+  for (const model of modelFallbacks) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    }
+    const err = await response.text();
+    lastError = `AI error (${response.status})`;
+    console.error(`safeAnthropicTextCall error for ${model}:`, response.status, err);
+    // Only continue to next model on 404 (model not found); stop on all other errors
+    if (response.status !== 404) break;
+  }
+  throw new Error(lastError || 'AI service unavailable');
+}
+
 function logRoCopilotDecision(route, payload) {
   console.info(`${route} decision`, payload);
 }
@@ -1400,6 +1431,113 @@ app.post("/ro-copilot/question", async (req, res) => {
   } catch (err) {
     console.error("/ro-copilot/question error", err);
     return res.status(500).json({ success: false, message: err instanceof Error ? err.message : "Internal server error" });
+  }
+});
+
+// ── RO Copilot: Interpret DVI ──────────────────────────────────────────────
+app.post('/ro-copilot/interpret-dvi', async (req, res) => {
+  try {
+    const { dviItems, roContext } = req.body;
+    if (!dviItems) return res.status(400).json({ error: 'dviItems required' });
+    const cultureProfile = getDefaultCultureProfile();
+    const { system, user } = buildInterpretDviPrompts({ dviItems, roContext, cultureProfile });
+    const result = await safeAnthropicJsonCall({ systemPrompt: system, userPrompt: user, maxTokens: 1500 });
+    if (!result.ok) return res.status(500).json({ error: result.reason });
+    res.json(result.data);
+  } catch (err) {
+    console.error('/ro-copilot/interpret-dvi error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RO Copilot: Part Lookup ────────────────────────────────────────────────
+app.post('/ro-copilot/part-lookup', async (req, res) => {
+  try {
+    const { itemName, roContext } = req.body;
+    if (!itemName) return res.status(400).json({ error: 'itemName required' });
+    const cultureProfile = getDefaultCultureProfile();
+    const { system, user } = buildPartLookupPrompts({ itemName, roContext, cultureProfile });
+    const text = await safeAnthropicTextCall({ systemPrompt: system, messages: [{ role: 'user', content: user }], maxTokens: 400 });
+    res.json({ explanation: text });
+  } catch (err) {
+    console.error('/ro-copilot/part-lookup error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RO Copilot: Objection Help ─────────────────────────────────────────────
+app.post('/ro-copilot/objection-help', async (req, res) => {
+  try {
+    const { objection, roContext } = req.body;
+    if (!objection) return res.status(400).json({ error: 'objection required' });
+    const cultureProfile = getDefaultCultureProfile();
+    const { system, user } = buildObjectionHelpPrompts({ objection, roContext, cultureProfile });
+    const text = await safeAnthropicTextCall({ systemPrompt: system, messages: [{ role: 'user', content: user }], maxTokens: 400 });
+    res.json({ response: text });
+  } catch (err) {
+    console.error('/ro-copilot/objection-help error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RO Copilot: Exhaust Assist ─────────────────────────────────────────────
+app.post('/ro-copilot/exhaust-assist', async (req, res) => {
+  try {
+    const { situationType, detail, roContext, history } = req.body;
+    if (!situationType) return res.status(400).json({ error: 'situationType required' });
+    const cultureProfile = getDefaultCultureProfile();
+    const { system, messages } = buildExhaustAssistPrompts({ situationType, detail, roContext, history, cultureProfile });
+    const text = await safeAnthropicTextCall({ systemPrompt: system, messages, maxTokens: 600 });
+    res.json({ script: text });
+  } catch (err) {
+    console.error('/ro-copilot/exhaust-assist error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RO Copilot: Update Customer ────────────────────────────────────────────
+app.patch('/ro-copilot/update-customer', async (req, res) => {
+  try {
+    const { customerId, fields } = req.body;
+    if (!customerId || !fields) return res.status(400).json({ error: 'customerId and fields required' });
+    const token = await getAccessToken();
+    const result = await tekmetricRequest(token, 'PATCH', `/api/v1/customers/${customerId}`, fields);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('/ro-copilot/update-customer error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RO Copilot: Update Job ─────────────────────────────────────────────────
+app.patch('/ro-copilot/update-job', async (req, res) => {
+  try {
+    const { jobId, fields } = req.body;
+    if (!jobId || !fields) return res.status(400).json({ error: 'jobId and fields required' });
+    const token = await getAccessToken();
+    const result = await tekmetricRequest(token, 'PATCH', `/api/v1/jobs/${jobId}`, fields);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('/ro-copilot/update-job error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RO Copilot: Add Canned Job to RO ──────────────────────────────────────
+app.post('/ro-copilot/add-canned-job', async (req, res) => {
+  try {
+    const { roId, shopId, serviceName } = req.body;
+    if (!roId || !shopId || !serviceName) return res.status(400).json({ error: 'roId, shopId, and serviceName required' });
+    const token = await getAccessToken();
+    const searchResult = await tekmetricRequest(token, 'GET', `/api/v1/canned-jobs?shopId=${shopId}&search=${encodeURIComponent(serviceName)}&size=5`);
+    const jobs = searchResult?.content || (Array.isArray(searchResult) ? searchResult : []);
+    if (jobs.length === 0) return res.json({ success: false, reason: 'no-canned-job-found' });
+    const cannedJobId = jobs[0].id;
+    await tekmetricRequest(token, 'POST', `/api/v1/repair-orders/${roId}/canned-jobs`, { cannedJobIds: [cannedJobId] });
+    res.json({ success: true, cannedJobId, cannedJobName: jobs[0].name });
+  } catch (err) {
+    console.error('/ro-copilot/add-canned-job error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
