@@ -136,6 +136,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // DVI Ready button tapped on TekMetric page — forward to sidebar
+  if (request.action === 'asc_dviReadyTriggered') {
+    chrome.runtime.sendMessage({ action: 'asc_dviReadyForImport' }).catch(() => {});
+    sendResponse({ success: true });
+    return true;
+  }
+
+  // RO URL detected by content script — forward to sidebar to auto-launch ROC Intake
+  if (request.action === 'asc_roDetected') {
+    chrome.runtime.sendMessage({ action: 'asc_roAutoDetected', roNumber: request.roNumber }).catch(() => {});
+    sendResponse({ success: true });
+    return true;
+  }
+
   // DVI data captured by content script — store it and forward to sidebar
   if (request.action === 'asc_dviCapture') {
     const roId = request.roId || 'unknown';
@@ -173,6 +187,133 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     rocInterpretDvi(request.dviPayload, request.roData || '')
       .then(r  => sendResponse({ success: true,  data: r }))
       .catch(e => sendResponse({ success: false, error: e.message }));
+    return true;
+  }
+
+  // New ROC: interpret DVI via Cloud Run /ro-copilot/interpret-dvi endpoint (returns structured JSON)
+  if (request.action === 'asc_rocInterpretDvi') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/interpret-dvi`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dviItems: request.dviItems, roContext: request.roContext })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'asc_rocPartLookup') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/part-lookup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemName: request.itemName, roContext: request.roContext })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data: data.explanation });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'asc_rocObjectionHelp') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/objection-help`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ objection: request.objection, roContext: request.roContext })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data: data.response });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'asc_rocExhaustAssist') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/exhaust-assist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ situationType: request.situationType, detail: request.detail, roContext: request.roContext, history: request.history })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data: data.script });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'asc_rocUpdateCustomer') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/update-customer`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerId: request.customerId, fields: request.fields })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'asc_rocUpdateJob') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/update-job`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: request.jobId, fields: request.fields })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'asc_rocAddCannedJob') {
+    (async () => {
+      try {
+        const response = await fetch(`${ASC_CLOUD_RUN_URL}/ro-copilot/add-canned-job`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roId: request.roId, shopId: request.shopId, serviceName: request.serviceName })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        sendResponse({ success: true, data });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
     return true;
   }
 
