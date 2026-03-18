@@ -8,6 +8,7 @@
 
   const PAYMENT_RE = /\/repair-orders\/\d+\/payment(?:[/?#]|$)/i;
   const INSPECTIONS_RE = /\/repair-orders\/(\d+)\/inspections?(?:[/?#]|$)/i;
+  const ROC_RE = /\/repair-orders\/(\d+)/;
 
   // ── Styles ─────────────────────────────────────────────────────
   const style = document.createElement('style');
@@ -45,6 +46,29 @@
     }
     #asc-appt-btn:active {
       transform: translateY(0);
+    }
+    #asc-dvi-ready-btn {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      z-index: 999998;
+      padding: 10px 18px;
+      background: linear-gradient(135deg, #9A3412 0%, #EA580C 60%, #F97316 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      box-shadow: 0 3px 12px rgba(249,115,22,0.45);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      animation: asc-appt-glow 2s ease-out infinite;
+    }
+    #asc-dvi-ready-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 16px rgba(249,115,22,0.55);
     }
   `;
   document.head.appendChild(style);
@@ -133,6 +157,26 @@
     document.getElementById('asc-appt-btn')?.remove();
   }
 
+  function injectDviReadyBtn() {
+    if (document.getElementById('asc-dvi-ready-btn')) return;
+    if (!INSPECTIONS_RE.test(window.location.href)) return;
+    const btn = document.createElement('button');
+    btn.id = 'asc-dvi-ready-btn';
+    btn.textContent = 'DVI Ready';
+    btn.addEventListener('click', () => {
+      try {
+        chrome.runtime.sendMessage({ action: 'asc_dviReadyTriggered' });
+      } catch (e) {
+        btn.remove();
+      }
+    });
+    document.body.appendChild(btn);
+  }
+
+  function removeDviReadyBtn() {
+    document.getElementById('asc-dvi-ready-btn')?.remove();
+  }
+
   // ── Inspections scrape scheduler ────────────────────────────────
   let scrapeTimer = null;
   function scheduleInspectionsScrape(url) {
@@ -150,14 +194,29 @@
     if (url !== lastUrl) {
       lastUrl = url;
       if (!PAYMENT_RE.test(url)) removeApptBtn();
+      if (!INSPECTIONS_RE.test(url)) removeDviReadyBtn();
       if (INSPECTIONS_RE.test(url)) scheduleInspectionsScrape(url);
+
+      // Detect generic RO URL and notify sidebar.
+      // IMPORTANT: guard against inspection and payment sub-pages — the inspection page
+      // also matches /repair-orders/\d+, so without this guard, navigating to the
+      // Inspections tab during Compression would re-fire asc_roDetected → openTool('roc')
+      // → rocOnOpen() → reset session back to Intake, discarding the advisor's progress.
+      const rocMatch = url.match(ROC_RE);
+      if (rocMatch && !PAYMENT_RE.test(url) && !INSPECTIONS_RE.test(url)) {
+        try {
+          chrome.runtime.sendMessage({ action: 'asc_roDetected', roNumber: rocMatch[1] });
+        } catch (_) {}
+      }
     }
     // Retry injection every tick while on payment page (handles React re-renders)
     if (PAYMENT_RE.test(url)) injectApptBtn();
+    if (INSPECTIONS_RE.test(url)) injectDviReadyBtn();
   }, 400);
 
   // Initial injection attempt
   if (PAYMENT_RE.test(window.location.href)) injectApptBtn();
+  if (INSPECTIONS_RE.test(window.location.href)) injectDviReadyBtn();
   if (INSPECTIONS_RE.test(window.location.href)) scheduleInspectionsScrape(window.location.href);
 
   // ── DVI / Inspections capture ───────────────────────────────────
