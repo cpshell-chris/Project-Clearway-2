@@ -508,6 +508,104 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .roc-concern-input:focus { border-color: #F97316; }
 .roc-restart-btn { background: white; border: 1.5px solid #FED7AA; color: #EA580C; border-radius: 8px; padding: 9px 16px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; width: 100%; transition: all 0.18s; }
 .roc-restart-btn:hover { background: #FFF7ED; border-color: #EA580C; }
+/* ═══ RO COPILOT REDESIGN ═══════════════════════════════════════════════ */
+.roc-header { background: linear-gradient(135deg, #9A3412 0%, #EA580C 60%, #F97316 100%); display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; flex-shrink: 0; gap: 6px; }
+.roc-nav-btn { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: white; width: 28px; height: 28px; border-radius: 7px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; padding: 0; line-height: 1; }
+.roc-nav-btn:hover { background: rgba(255,255,255,0.30); }
+.roc-step-rail { display: flex; align-items: center; gap: 0; flex: 1; justify-content: center; overflow: hidden; }
+.roc-step-pill { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.28); color: rgba(255,255,255,0.7); border-radius: 20px; padding: 3px 9px; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.01em; }
+.roc-step-pill:hover { background: rgba(255,255,255,0.25); color: white; }
+.roc-step-pill.active { background: rgba(255,255,255,0.32); border-color: rgba(255,255,255,0.65); color: white; font-weight: 700; }
+.roc-step-pill.done { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
+.roc-step-connector { color: rgba(255,255,255,0.28); font-size: 9px; padding: 0 2px; flex-shrink: 0; }
+.roc-screen { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
+.roc-screen.active { display: flex; }
+.roc-body { padding: 0 12px 80px; flex: 1; }
+.roc-section-label { font-size: 10px; font-weight: 700; color: #9A3412; text-transform: uppercase; letter-spacing: 0.9px; margin: 14px 0 6px; }
+.roc-divider { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.roc-divider-line { flex: 1; height: 1px; background: #FED7AA; }
+.roc-divider-dot { width: 5px; height: 5px; border-radius: 50%; background: #FED7AA; flex-shrink: 0; }
+.roc-verify-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; margin-bottom: 6px; cursor: default; }
+.roc-verify-item.warning { border-color: #F59E0B; background: #FFFBEB; cursor: pointer; }
+.roc-verify-item.warning:hover { background: #FEF3C7; }
+.roc-verify-label { font-size: 12px; color: #3a3a3a; font-weight: 500; flex: 1; }
+.roc-verify-status { font-size: 11px; font-weight: 700; flex-shrink: 0; margin-left: 8px; }
+.roc-verify-status.ok   { color: #16A34A; }
+.roc-verify-status.warn { color: #D97706; }
+.roc-inline-edit { display: none; padding: 8px 12px 10px; background: #FFFBEB; border: 1px solid #F59E0B; border-top: none; border-radius: 0 0 8px 8px; margin-top: -6px; margin-bottom: 6px; }
+.roc-inline-edit.open { display: block; }
+.roc-inline-edit input { width: 100%; border: 1px solid #FED7AA; border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: inherit; background: white; outline: none; margin-bottom: 6px; }
+.roc-inline-edit input:focus { border-color: #EA580C; }
+.roc-inline-btn { background: #EA580C; color: white; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.roc-inline-btn:hover { background: #C2410C; }
+.roc-contact-pref { display: flex; gap: 6px; margin-top: 8px; }
+.roc-pref-chip { flex: 1; border: 1.5px solid #FED7AA; background: white; border-radius: 20px; padding: 5px 0; font-size: 11px; font-weight: 600; color: #9A3412; cursor: pointer; text-align: center; transition: all 0.15s; }
+.roc-pref-chip.selected { background: #EA580C; border-color: #EA580C; color: white; }
+.roc-dvi-checklist-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid #FEF3E8; }
+.roc-dvi-checklist-item:last-child { border-bottom: none; }
+.roc-dvi-item-name { font-size: 12px; font-weight: 600; color: #3a3a3a; }
+.roc-dvi-item-note { font-size: 11px; color: #6c757d; margin-top: 2px; line-height: 1.4; }
+.roc-photo-badge { font-size: 9px; font-weight: 700; border-radius: 4px; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; margin-top: 1px; }
+.roc-photo-badge.required   { background: #FED7AA; color: #9A3412; }
+.roc-photo-badge.if-dirty   { background: #FEF3C7; color: #92400E; }
+.roc-gauge-wrap { margin: 4px 0 10px; }
+.roc-gauge-bar-bg { height: 8px; background: #FEF3E8; border-radius: 4px; overflow: hidden; border: 1px solid #FED7AA; }
+.roc-gauge-bar-fill { height: 100%; background: linear-gradient(90deg, #EA580C, #F97316); border-radius: 4px; transition: width 0.5s ease; }
+.roc-gauge-pct { font-size: 22px; font-weight: 700; color: #EA580C; text-align: center; margin-bottom: 4px; }
+.roc-gauge-factors { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.roc-gauge-factor { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4a5568; }
+.roc-factor-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.roc-factor-dot.met     { background: #16A34A; }
+.roc-factor-dot.not-met { background: #D97706; }
+.roc-collapsible-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; cursor: pointer; border-bottom: 1px solid #FEF3E8; user-select: none; }
+.roc-collapsible-header:hover { background: #FFEDD5; margin: 0 -12px; padding: 10px 12px; border-radius: 4px; }
+.roc-collapsible-title { font-size: 12px; font-weight: 700; color: #3a3a3a; }
+.roc-chevron { font-size: 12px; color: #9A3412; transition: transform 0.2s; }
+.roc-collapsible-header.open .roc-chevron { transform: rotate(90deg); }
+.roc-collapsible-body { display: none; padding: 8px 0 4px; }
+.roc-collapsible-body.open { display: block; }
+.roc-service-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #FEF3E8; }
+.roc-service-row:last-child { border-bottom: none; }
+.roc-service-name { font-size: 12px; color: #3a3a3a; flex: 1; }
+.roc-on-ro-badge  { font-size: 10px; font-weight: 700; color: #16A34A; background: #DCFCE7; border-radius: 10px; padding: 2px 8px; flex-shrink: 0; }
+.roc-add-ro-btn   { font-size: 10px; font-weight: 700; color: #EA580C; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; padding: 2px 8px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+.roc-add-ro-btn:hover { background: #FFEDD5; }
+.roc-add-ro-btn.adding { color: #6c757d; cursor: default; }
+.roc-add-ro-btn.added  { color: #16A34A; background: #DCFCE7; border-color: #16A34A; cursor: default; }
+.roc-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.roc-chip { border: 1.5px solid #FED7AA; background: #FFF7ED; color: #9A3412; border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.roc-chip:hover { background: #FFEDD5; border-color: #EA580C; }
+.roc-chip.active { background: #EA580C; border-color: #EA580C; color: white; }
+.roc-quick-action-wrap { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.roc-quick-action { border: 1.5px solid #FED7AA; background: #FFF7ED; border-radius: 8px; overflow: hidden; }
+.roc-quick-action-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.roc-quick-action input { border: none; background: transparent; font-size: 12px; font-family: inherit; outline: none; flex: 1; color: #3a3a3a; }
+.roc-quick-action input::placeholder { color: #c0a898; }
+.roc-quick-action-btn { background: #EA580C; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: background 0.15s; white-space: nowrap; font-family: inherit; }
+.roc-quick-action-btn:hover { background: #C2410C; }
+.roc-quick-action-btn:disabled { background: #c0a898; cursor: default; }
+.roc-quick-result { display: none; padding: 8px 10px; background: #fffbf8; border-top: 1px solid #FED7AA; font-size: 12px; color: #3a3a3a; line-height: 1.55; }
+.roc-quick-result.show { display: block; }
+.roc-chat-history { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.roc-chat-bubble { padding: 8px 11px; border-radius: 10px; font-size: 12px; line-height: 1.55; max-width: 88%; }
+.roc-chat-bubble.user { background: #EA580C; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+.roc-chat-bubble.assistant { background: #FFF7ED; border: 1px solid #FED7AA; color: #3a3a3a; align-self: flex-start; border-bottom-left-radius: 3px; }
+.roc-chat-input-row { display: flex; gap: 6px; align-items: flex-end; }
+.roc-chat-input { flex: 1; border: 1.5px solid #FED7AA; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: inherit; resize: none; outline: none; background: white; }
+.roc-chat-input:focus { border-color: #EA580C; }
+.roc-chat-send-btn { background: #EA580C; color: white; border: none; border-radius: 8px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
+.roc-chat-send-btn:hover { background: #C2410C; }
+.roc-chat-send-btn:disabled { background: #c0a898; cursor: default; }
+.roc-exhaust-summary { display: flex; gap: 6px; margin-bottom: 4px; }
+.roc-exhaust-mini-card { flex: 1; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; padding: 8px 10px; text-align: center; }
+.roc-exhaust-mini-label { font-size: 9px; font-weight: 700; color: #9A3412; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
+.roc-exhaust-mini-value { font-size: 11px; font-weight: 600; color: #3a3a3a; }
+.roc-advance-btn { width: 100%; padding: 13px 16px; background: linear-gradient(135deg, #9A3412 0%, #EA580C 60%, #F97316 100%); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: opacity 0.15s; letter-spacing: 0.01em; font-family: inherit; margin-top: 12px; }
+.roc-advance-btn:hover { opacity: 0.88; }
+.roc-advance-btn:disabled { opacity: 0.45; cursor: default; }
+.roc-no-ro { text-align: center; padding: 32px 16px; color: #9a8880; font-size: 13px; line-height: 1.6; }
+.roc-loading-state { text-align: center; padding: 24px 16px; color: #9A3412; font-size: 12px; }
+.roc-error-note { font-size: 11px; color: #DC2626; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -928,230 +1026,211 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
     </div><!-- /#tool-sw-content -->
 
     <!-- RO COPILOT -->
-    <div id="tool-roc-content" style="display:none;">
+    <div id="tool-roc-content" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
 
-      <!-- Phase indicators -->
-      <div class="sw-steps" style="padding: 5px 12px 0;">
-        <div class="sw-step active" id="roc-phase-ind-1">
-          <div class="sw-step-num">1</div>
-          <div class="sw-step-lbl">Write-Up</div>
+      <!-- ROC header: custom step rail (replaces outer #tool-header when ROC active) -->
+      <div class="roc-header" id="roc-header">
+        <button class="roc-nav-btn" id="roc-back-btn" type="button" title="Back">&#8592;</button>
+        <div class="roc-step-rail" id="roc-step-rail">
+          <button class="roc-step-pill active" id="roc-pill-intake"      data-step="intake"      type="button">Intake</button>
+          <span class="roc-step-connector">—</span>
+          <button class="roc-step-pill"        id="roc-pill-compression" data-step="compression" type="button">Compression</button>
+          <span class="roc-step-connector">—</span>
+          <button class="roc-step-pill"        id="roc-pill-combustion"  data-step="combustion"  type="button">Combustion</button>
+          <span class="roc-step-connector">—</span>
+          <button class="roc-step-pill"        id="roc-pill-exhaust"     data-step="exhaust"     type="button">Exhaust</button>
         </div>
-        <div class="sw-step" id="roc-phase-ind-2">
-          <div class="sw-step-num">2</div>
-          <div class="sw-step-lbl">Findings</div>
-        </div>
-        <div class="sw-step" id="roc-phase-ind-3">
-          <div class="sw-step-num">3</div>
-          <div class="sw-step-lbl">Estimate</div>
-        </div>
-        <div class="sw-step" id="roc-phase-ind-4">
-          <div class="sw-step-num">4</div>
-          <div class="sw-step-lbl">Sell</div>
-        </div>
-        <div class="sw-step" id="roc-phase-ind-5">
-          <div class="sw-step-num">5</div>
-          <div class="sw-step-lbl">Support</div>
-        </div>
+        <button class="roc-nav-btn" id="roc-close-btn" type="button" title="Exit RO Copilot">&#x2715;</button>
       </div>
 
-      <!-- ── PHASE 1: WRITE-UP ── -->
-      <div class="sw-screen active" id="roc-screen-1">
-        <div class="sw-card">
-          <div class="sw-section-label">Customer Concerns</div>
-          <div id="roc-concerns-list">
-            <p class="roc-no-ro-note">Open a Repair Order in TekMetric to see customer concerns.</p>
-          </div>
-        </div>
-        <div class="sw-card">
-          <div class="sw-section-label">Write-Up Checklist</div>
-          <div class="roc-checklist">
-            <div class="roc-check-item" id="roc-c1-1">
-              <input type="checkbox" id="roc-cb-1-1"><label for="roc-cb-1-1">Customer concerns documented on the RO</label>
-            </div>
-            <div class="roc-check-item" id="roc-c1-2">
-              <input type="checkbox" id="roc-cb-1-2"><label for="roc-cb-1-2">Vehicle mileage recorded</label>
-            </div>
-            <div class="roc-check-item" id="roc-c1-3">
-              <input type="checkbox" id="roc-cb-1-3"><label for="roc-cb-1-3">Technician assigned</label>
-            </div>
-            <div class="roc-check-item" id="roc-c1-4">
-              <input type="checkbox" id="roc-cb-1-4"><label for="roc-cb-1-4">Customer contact preference confirmed</label>
-            </div>
-          </div>
-          <div class="sw-section-label" style="margin-top:10px;">AI Assist — Phrase a Concern</div>
-          <textarea class="roc-concern-input" id="roc-p1-concern-input" rows="2" placeholder="Type a rough concern (e.g. 'makes noise when braking')…"></textarea>
-          <button class="roc-assist-btn" id="roc-p1-assist-btn" type="button">Improve Phrasing</button>
-          <div class="roc-assist-box" id="roc-p1-assist-box">
-            <div class="roc-assist-text" id="roc-p1-assist-text"></div>
-          </div>
-        </div>
-        <div class="sw-nav-btns">
-          <button class="btn btn-primary" id="roc-p1-continue" type="button" style="margin-bottom:0;">Car With Tech →</button>
-        </div>
-      </div><!-- /roc-screen-1 -->
+      <!-- ── STEP 1: INTAKE ─────────────────────────────────────── -->
+      <div class="roc-screen active" id="roc-screen-intake">
+        <div class="roc-body">
+          <div class="roc-section-label">Verify Before You Begin</div>
 
-      <!-- ── PHASE 2: FINDINGS READY ── -->
-      <div class="sw-screen" id="roc-screen-2">
-
-        <!-- DVI capture status -->
-        <div class="sw-card" id="roc-dvi-card">
-          <div class="sw-section-label">Digital Vehicle Inspection</div>
-
-          <!-- Waiting state -->
-          <div id="roc-dvi-waiting">
-            <p style="font-size:12px;color:#6c757d;line-height:1.6;margin-bottom:10px;">Navigate to the <strong>Inspections tab</strong> in TekMetric — the DVI will capture automatically.</p>
-            <button class="roc-assist-btn" id="roc-dvi-refresh-btn" type="button" style="background:#6c757d;">Refresh / Capture Now</button>
+          <!-- Concern -->
+          <div class="roc-verify-item" id="roc-verify-concern">
+            <span class="roc-verify-label">Customer concern documented</span>
+            <span class="roc-verify-status warn" id="roc-concern-status">Checking…</span>
           </div>
 
-          <!-- DVI items loaded state -->
-          <div id="roc-dvi-loaded" style="display:none;">
-            <div id="roc-dvi-summary-row" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;"></div>
-            <div class="roc-jobs-wrap" id="roc-dvi-items-list"></div>
-            <button class="roc-assist-btn" id="roc-dvi-interpret-btn" type="button" style="margin-top:10px;">Interpret DVI for Me</button>
-            <div class="roc-assist-box" id="roc-dvi-assist-box">
-              <div class="roc-assist-text" id="roc-dvi-assist-text"></div>
-            </div>
+          <!-- Phone with inline edit -->
+          <div class="roc-verify-item" id="roc-verify-phone">
+            <span class="roc-verify-label">Phone number on file</span>
+            <span class="roc-verify-status warn" id="roc-phone-status">Checking…</span>
           </div>
-        </div>
+          <div class="roc-inline-edit" id="roc-phone-edit">
+            <input type="tel" id="roc-phone-input" placeholder="Enter phone number">
+            <button class="roc-inline-btn" id="roc-phone-save-btn" type="button">Save to TekMetric</button>
+          </div>
 
-        <div class="sw-card">
-          <div class="sw-section-label">Checklist</div>
-          <div class="roc-checklist">
-            <div class="roc-check-item" id="roc-c2-1">
-              <input type="checkbox" id="roc-cb-2-1"><label for="roc-cb-2-1">Tech confirmed they have the vehicle</label>
-            </div>
-            <div class="roc-check-item" id="roc-c2-2">
-              <input type="checkbox" id="roc-cb-2-2"><label for="roc-cb-2-2">DVI findings received</label>
-            </div>
-            <div class="roc-check-item" id="roc-c2-3">
-              <input type="checkbox" id="roc-cb-2-3"><label for="roc-cb-2-3">Additional services identified from DVI</label>
+          <!-- Contact preference -->
+          <div style="padding: 4px 0 8px; display: none;" id="roc-contact-pref-row">
+            <div style="font-size:11px; color:#6c757d; margin-bottom:6px;">Contact preference:</div>
+            <div class="roc-contact-pref">
+              <button class="roc-pref-chip" id="roc-pref-call" type="button">Call</button>
+              <button class="roc-pref-chip" id="roc-pref-text" type="button">Text</button>
             </div>
           </div>
-          <div class="sw-section-label" style="margin-top:10px;">If Customer Calls</div>
-          <p style="font-size:11px;color:#6c757d;margin-bottom:8px;line-height:1.5;">Generate a script for while the customer is waiting on DVI results.</p>
-          <button class="roc-assist-btn" id="roc-p2-assist-btn" type="button">Generate Status Script</button>
-          <div class="roc-assist-box" id="roc-p2-assist-box">
-            <div class="roc-assist-text" id="roc-p2-assist-text"></div>
-          </div>
-        </div>
-        <div class="sw-nav-btns">
-          <button class="sw-btn-outline" id="roc-p2-back" type="button">← Back</button>
-          <button class="btn btn-primary" id="roc-p2-continue" type="button" style="margin-bottom:0;">Build Estimate →</button>
-        </div>
-      </div><!-- /roc-screen-2 -->
 
-      <!-- ── PHASE 3: ESTIMATE BUILD ── -->
-      <div class="sw-screen" id="roc-screen-3">
-        <div class="sw-card">
-          <div class="sw-section-label">Services on This RO</div>
-          <div class="roc-jobs-wrap" id="roc-jobs-list">
-            <p class="roc-no-ro-note">No RO loaded.</p>
+          <!-- Address with inline edit -->
+          <div class="roc-verify-item" id="roc-verify-address">
+            <span class="roc-verify-label">Address on file</span>
+            <span class="roc-verify-status warn" id="roc-address-status">Checking…</span>
           </div>
-        </div>
-        <div class="sw-card">
-          <div class="sw-section-label">Estimate Checklist</div>
-          <div class="roc-checklist">
-            <div class="roc-check-item" id="roc-c3-1">
-              <input type="checkbox" id="roc-cb-3-1"><label for="roc-cb-3-1">Every concern has a cause &amp; correction</label>
-            </div>
-            <div class="roc-check-item" id="roc-c3-2">
-              <input type="checkbox" id="roc-cb-3-2"><label for="roc-cb-3-2">All services have a customer-facing description</label>
-            </div>
-            <div class="roc-check-item" id="roc-c3-3">
-              <input type="checkbox" id="roc-cb-3-3"><label for="roc-cb-3-3">Labor added to every line item</label>
-            </div>
-            <div class="roc-check-item" id="roc-c3-4">
-              <input type="checkbox" id="roc-cb-3-4"><label for="roc-cb-3-4">Parts added or ordered for every line item</label>
-            </div>
-            <div class="roc-check-item" id="roc-c3-5">
-              <input type="checkbox" id="roc-cb-3-5"><label for="roc-cb-3-5">Total reviewed before calling the customer</label>
-            </div>
+          <div class="roc-inline-edit" id="roc-address-edit">
+            <input type="text" id="roc-address-input" placeholder="Street address">
+            <input type="text" id="roc-city-input"    placeholder="City">
+            <input type="text" id="roc-state-input"   placeholder="State" style="width:60px; display:inline-block;">
+            <input type="text" id="roc-zip-input"     placeholder="ZIP" style="width:calc(100% - 66px); display:inline-block; margin-left:6px;">
+            <button class="roc-inline-btn" id="roc-address-save-btn" type="button" style="margin-top:6px;">Save to TekMetric</button>
           </div>
-          <div class="sw-section-label" style="margin-top:10px;">AI Assist</div>
-          <p style="font-size:11px;color:#6c757d;margin-bottom:8px;line-height:1.5;">Claude reviews your estimate for gaps, missing descriptions, and items customers commonly question.</p>
-          <button class="roc-assist-btn" id="roc-p3-assist-btn" type="button">Review My Estimate</button>
-          <div class="roc-assist-box" id="roc-p3-assist-box">
-            <div class="roc-assist-text" id="roc-p3-assist-text"></div>
-          </div>
-        </div>
-        <div class="sw-nav-btns">
-          <button class="sw-btn-outline" id="roc-p3-back" type="button">← Back</button>
-          <button class="btn btn-primary" id="roc-p3-continue" type="button" style="margin-bottom:0;">Call Customer →</button>
-        </div>
-      </div><!-- /roc-screen-3 -->
 
-      <!-- ── PHASE 4: PRESENT & SELL ── -->
-      <div class="sw-screen" id="roc-screen-4">
-        <div id="roc-p4-main">
-          <div class="sw-card">
-            <div class="sw-section-label">Generate Call Script</div>
-            <p style="font-size:11px;color:#6c757d;margin-bottom:8px;line-height:1.5;">Claude writes a full phone script for presenting this estimate — with objection handlers for the big-ticket items.</p>
-            <button class="roc-assist-btn" id="roc-p4-assist-btn" type="button">Generate Call Script</button>
-            <div class="roc-assist-box" id="roc-p4-assist-box">
-              <div class="roc-assist-text" id="roc-p4-assist-text"></div>
-            </div>
+          <!-- Technician -->
+          <div class="roc-verify-item" id="roc-verify-tech">
+            <span class="roc-verify-label">Technician assigned to all jobs</span>
+            <span class="roc-verify-status warn" id="roc-tech-status">Checking…</span>
           </div>
-          <div class="sw-card">
-            <div class="sw-section-label">Capture Approvals</div>
-            <div class="roc-approval-wrap" id="roc-approval-list">
-              <p class="roc-no-ro-note">No RO loaded.</p>
-            </div>
+          <div class="roc-error-note" id="roc-tech-note" style="display:none;">Assign technicians manually in TekMetric, then return here.</div>
+
+          <div class="roc-error-note" id="roc-no-ro-note" style="display:none;">No RO loaded. Navigate to a Repair Order in TekMetric to begin.</div>
+
+          <button class="roc-advance-btn" id="roc-intake-advance" type="button">Intake Complete — Move to Compression</button>
+        </div>
+      </div><!-- /roc-screen-intake -->
+
+      <!-- ── STEP 2: COMPRESSION ────────────────────────────────── -->
+      <div class="roc-screen" id="roc-screen-compression">
+        <div class="roc-body">
+          <div class="roc-section-label">DVI Checklist for the Tech</div>
+          <div id="roc-dvi-checklist-wrap">
+            <!-- Populated from culture profile dviChecklist by JS -->
           </div>
-          <div class="sw-card">
-            <div class="sw-section-label">Sell Checklist</div>
-            <div class="roc-checklist">
-              <div class="roc-check-item" id="roc-c4-1">
-                <input type="checkbox" id="roc-cb-4-1"><label for="roc-cb-4-1">Customer contacted</label>
+
+          <div class="roc-divider"><div class="roc-divider-line"></div><div class="roc-divider-dot"></div><div class="roc-divider-line"></div></div>
+
+          <p style="font-size:11px; color:#6c757d; line-height:1.6; margin-bottom:4px;">When the tech submits the DVI, tap below to import all findings and move to Combustion.</p>
+          <p style="font-size:11px; color:#9a8880; line-height:1.5; margin-bottom:0;" id="roc-dvi-capture-status">Waiting for DVI data…</p>
+
+          <button class="roc-advance-btn" id="roc-compression-advance" type="button">DVI Complete — Import &amp; Continue</button>
+          <div class="roc-loading-state" id="roc-compression-loading" style="display:none;">Interpreting DVI findings…</div>
+          <div class="roc-error-note"    id="roc-compression-error"   style="display:none;"></div>
+        </div>
+      </div><!-- /roc-screen-compression -->
+
+      <!-- ── STEP 3: COMBUSTION ─────────────────────────────────── -->
+      <div class="roc-screen" id="roc-screen-combustion">
+        <div class="roc-body">
+          <div class="roc-section-label">RO Readiness</div>
+          <div class="roc-gauge-wrap">
+            <div class="roc-gauge-pct" id="roc-gauge-pct">—</div>
+            <div class="roc-gauge-bar-bg"><div class="roc-gauge-bar-fill" id="roc-gauge-fill" style="width:0%"></div></div>
+            <div class="roc-gauge-factors" id="roc-gauge-factors"></div>
+          </div>
+
+          <div class="roc-divider"><div class="roc-divider-line"></div><div class="roc-divider-dot"></div><div class="roc-divider-line"></div></div>
+
+          <div class="roc-section-label">RO Intelligence</div>
+
+          <!-- Collapsible 1: Findings Overview -->
+          <div class="roc-collapsible-header" id="roc-coll-hdr-1">
+            <span class="roc-collapsible-title">Findings Overview</span>
+            <span class="roc-chevron">&#8250;</span>
+          </div>
+          <div class="roc-collapsible-body" id="roc-coll-body-1">
+            <p style="font-size:12px; color:#3a3a3a; line-height:1.6;" id="roc-intel-summary">—</p>
+          </div>
+
+          <!-- Collapsible 2: Technical Detail -->
+          <div class="roc-collapsible-header" id="roc-coll-hdr-2">
+            <span class="roc-collapsible-title">Technical Detail</span>
+            <span class="roc-chevron">&#8250;</span>
+          </div>
+          <div class="roc-collapsible-body" id="roc-coll-body-2">
+            <div id="roc-intel-technical"></div>
+          </div>
+
+          <!-- Collapsible 3: How to Open the Call -->
+          <div class="roc-collapsible-header" id="roc-coll-hdr-3">
+            <span class="roc-collapsible-title">How to Open the Call</span>
+            <span class="roc-chevron">&#8250;</span>
+          </div>
+          <div class="roc-collapsible-body" id="roc-coll-body-3">
+            <p style="font-size:12px; color:#3a3a3a; line-height:1.6;" id="roc-intel-callscript">—</p>
+          </div>
+
+          <!-- Collapsible 4: Services on RO -->
+          <div class="roc-collapsible-header" id="roc-coll-hdr-4">
+            <span class="roc-collapsible-title">Services on RO</span>
+            <span class="roc-chevron">&#8250;</span>
+          </div>
+          <div class="roc-collapsible-body" id="roc-coll-body-4">
+            <div id="roc-intel-services"></div>
+          </div>
+
+          <div class="roc-divider"><div class="roc-divider-line"></div><div class="roc-divider-dot"></div><div class="roc-divider-line"></div></div>
+
+          <div class="roc-section-label">Advisor Quick Actions</div>
+          <div class="roc-quick-action-wrap">
+            <div class="roc-quick-action" id="roc-part-lookup-wrap">
+              <div class="roc-quick-action-header">
+                <input type="text" id="roc-part-lookup-input" placeholder="Part or system name…">
+                <button class="roc-quick-action-btn" id="roc-part-lookup-btn" type="button">Look Up</button>
               </div>
-              <div class="roc-check-item" id="roc-c4-2">
-                <input type="checkbox" id="roc-cb-4-2"><label for="roc-cb-4-2">All line items have a decision (approved / declined)</label>
+              <div class="roc-quick-result" id="roc-part-lookup-result"></div>
+            </div>
+            <div class="roc-quick-action" id="roc-objection-wrap">
+              <div class="roc-quick-action-header">
+                <input type="text" id="roc-objection-input" placeholder="Describe the objection…">
+                <button class="roc-quick-action-btn" id="roc-objection-btn" type="button">Help</button>
               </div>
-              <div class="roc-check-item" id="roc-c4-3">
-                <input type="checkbox" id="roc-cb-4-3"><label for="roc-cb-4-3">Tech notified of approved work scope</label>
-              </div>
+              <div class="roc-quick-result" id="roc-objection-result"></div>
             </div>
           </div>
-          <div class="sw-nav-btns" style="flex-direction:column;gap:8px;">
-            <button class="roc-sold-btn" id="roc-p4-sold" type="button">✓ Sale Made — Hand Off to Tech</button>
-            <button class="sw-btn-outline" id="roc-p4-back" type="button" style="width:100%;">← Back</button>
-          </div>
-        </div><!-- /roc-p4-main -->
 
-        <!-- Success state -->
-        <div class="roc-success-box" id="roc-p4-success">
-          <div class="roc-success-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" stroke="#F97316" stroke-width="2.5" width="44" height="44"><circle cx="20" cy="20" r="17"/><path d="M11 20l6 6 12-12"/></svg>
-          </div>
-          <div class="roc-success-title">Sale Made!</div>
-          <div class="roc-success-sub">The tech has what they need. If anything comes up after the sale, use Phase 5 below.</div>
-          <button class="btn btn-primary" id="roc-goto-p5" type="button" style="width:100%;margin-bottom:8px;">Go to Post-Sale Support →</button>
-          <button class="roc-restart-btn" id="roc-restart" type="button">Start New RO</button>
+          <button class="roc-advance-btn" id="roc-combustion-advance" type="button">Sale Complete — Move to Exhaust</button>
         </div>
-      </div><!-- /roc-screen-4 -->
+      </div><!-- /roc-screen-combustion -->
 
-      <!-- ── PHASE 5: POST-SALE SUPPORT ── -->
-      <div class="sw-screen" id="roc-screen-5">
-        <div class="sw-card">
-          <div class="sw-section-label">What's the Situation?</div>
-          <p style="font-size:11px;color:#6c757d;margin-bottom:10px;line-height:1.5;">The sale is made. Use this when something unexpected comes up. Tap a chip or describe the situation.</p>
-          <div class="roc-chip-row">
-            <button class="roc-chip" type="button" data-prompt="The customer wants to remove some of the work they already approved.">Customer changing approval</button>
-            <button class="roc-chip" type="button" data-prompt="The tech found an additional problem mid-repair that wasn't on the original estimate.">Tech found more</button>
-            <button class="roc-chip" type="button" data-prompt="Parts are delayed and I need to tell the customer their vehicle won't be ready on time.">Parts delayed</button>
-            <button class="roc-chip" type="button" data-prompt="The customer is calling with questions about the work being done.">Customer calling</button>
-            <button class="roc-chip" type="button" data-prompt="The customer is unhappy or upset about something.">Customer unhappy</button>
+      <!-- ── STEP 4: EXHAUST ────────────────────────────────────── -->
+      <div class="roc-screen" id="roc-screen-exhaust">
+        <div class="roc-body">
+          <div class="roc-section-label">Step Summary</div>
+          <div class="roc-exhaust-summary">
+            <div class="roc-exhaust-mini-card">
+              <div class="roc-exhaust-mini-label">Intake</div>
+              <div class="roc-exhaust-mini-value">Complete</div>
+            </div>
+            <div class="roc-exhaust-mini-card">
+              <div class="roc-exhaust-mini-label">Compression</div>
+              <div class="roc-exhaust-mini-value" id="roc-exhaust-comp-val">Complete</div>
+            </div>
+            <div class="roc-exhaust-mini-card">
+              <div class="roc-exhaust-mini-label">Combustion</div>
+              <div class="roc-exhaust-mini-value" id="roc-exhaust-comb-val">Sold</div>
+            </div>
           </div>
-          <div class="roc-p5-history" id="roc-p5-history"></div>
+
+          <div class="roc-divider"><div class="roc-divider-line"></div><div class="roc-divider-dot"></div><div class="roc-divider-line"></div></div>
+
+          <div class="roc-section-label">What Happened After the Sale?</div>
+          <div class="roc-chip-row" id="roc-exhaust-chips">
+            <button class="roc-chip" type="button" data-situation="supplement">Supplement Item</button>
+            <button class="roc-chip" type="button" data-situation="delay">Delay Follow-up</button>
+            <button class="roc-chip" type="button" data-situation="objection">Post-sale Objection</button>
+            <button class="roc-chip" type="button" data-situation="pickup">Ready for Pickup</button>
+          </div>
+
+          <div class="roc-divider"><div class="roc-divider-line"></div><div class="roc-divider-dot"></div><div class="roc-divider-line"></div></div>
+
+          <div class="roc-section-label">Coaching Chat</div>
+          <div class="roc-chat-history" id="roc-exhaust-history"></div>
           <div class="roc-chat-input-row">
-            <textarea class="roc-chat-input" id="roc-p5-input" rows="2" placeholder="Describe the situation…"></textarea>
-            <button class="roc-chat-send-btn" id="roc-p5-send" type="button">↑</button>
+            <textarea class="roc-chat-input" id="roc-exhaust-input" rows="2" placeholder="Describe the situation…"></textarea>
+            <button class="roc-chat-send-btn" id="roc-exhaust-send" type="button">&#8593;</button>
           </div>
         </div>
-        <div class="sw-nav-btns">
-          <button class="sw-btn-outline" id="roc-p5-back" type="button">← Back</button>
-          <button class="roc-restart-btn" id="roc-restart-p5" type="button" style="flex:1;">Start New RO</button>
-        </div>
-      </div><!-- /roc-screen-5 -->
+      </div><!-- /roc-screen-exhaust -->
 
     </div><!-- /#tool-roc-content -->
 
