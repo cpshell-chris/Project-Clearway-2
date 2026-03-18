@@ -42,12 +42,11 @@ The four steps are: **Intake → Compression → Combustion → Exhaust.**
   - Address on file
   - Technician assigned to all jobs
 - Yellow warning rows are tappable to resolve inline where possible (e.g. entering a missing phone number).
-- A note below the list: *"Verified items will be saved to TekMetric where the API allows."* (Conditional language — see Open Question #1.)
 - **Full-width primary button:** "Intake Complete — Move to Compression"
 
 ### TekMetric Integration
-- Read: customer info (name, phone, email, address), vehicle info, jobs (name, technician assignment), concern text — via TekMetric API through Cloud Run.
-- Write: update customer phone preference, address, concern text back to TekMetric via API **only where write endpoints are confirmed available** (see Open Question #1). Items that cannot be written back silently skip the write without error.
+- Read: customer info (name, phone, email, address), vehicle info, jobs (name, technician assignment), concern text — via `GET /api/v1/repair-orders/{id}` and `GET /api/v1/customers/{id}` through Cloud Run.
+- **Write-back is not available.** The TekMetric public API is confirmed read-only — no POST or PATCH endpoints are exposed. Advisors must resolve any gaps (missing phone, unassigned tech) manually in TekMetric. The UI shows what is missing; it cannot fix it automatically.
 
 ---
 
@@ -114,7 +113,7 @@ All four DVI intelligence sections are presented as tappable, collapsible cards 
 3. **How to Open the Call** — ready-to-use script opener
 4. **Services on RO** — checklist with On RO / Add to RO status per item
 
-**"Add to RO" items:** Each item marked `missing` shows a tappable row. Tapping it attempts a TekMetric API write-back to add the job. On success, the row status updates to `on-ro` and the readiness score recalculates. On failure (API error or endpoint not available), the row shows a static note: *"Add this manually in TekMetric"* — no modal, no blocking error.
+**"Add to RO" items:** Each item marked `missing` shows a tappable row. Because the TekMetric public API is read-only, tapping an "Add to RO" row does not write to TekMetric — it instead copies the service name to clipboard and shows a brief inline note: *"Add this manually in TekMetric."* The advisor adds it in the TekMetric window, then returns to the sidebar. The checklist item remains highlighted as a reminder until the advisor dismisses it manually.
 
 #### Advisor Quick Actions
 Two chip buttons below the intelligence sections:
@@ -209,7 +208,7 @@ Stored in `chrome.storage.session` (tab-scoped, clears on browser restart), keye
 
 ## Open Questions (to resolve during implementation)
 
-1. **TekMetric write-back scope** — which fields does the TekMetric API actually allow writing? (customer address, contact preference, new RO jobs) Must be confirmed against live API docs before any write-back code is written. UI copy is intentionally conditional pending this confirmation.
+1. **TekMetric write-back scope** — ~~RESOLVED~~. The TekMetric public API is confirmed read-only (GET endpoints only: `/api/v1/repair-orders`, `/api/v1/customers`, `/api/v1/jobs`, `/api/v1/shops`). No POST or PATCH endpoints are available. All write-back functionality has been removed from the design. The app is a read + intelligence layer only.
 2. **DVI DOM structure** — exact CSS selectors for the TekMetric inspection page must be mapped against both sandbox and production environments before the DOM scraper is written. Fetch interception is the primary path; DOM scrape is the fallback.
 3. **RO Readiness scoring** — the 4-factor equal-weight formula defined above is a starting point. Weighting may be adjusted during implementation based on real-world advisor feedback.
 4. **DVI photo prompts** — the Compression checklist items and photo requirements are defined in `cultureProfiles.js` per shop from day one, using the schema `{ name, photoRequired: true|false|'if-dirty', note }`. The current Cardinal Plaza Shell profile will need this `dviChecklist` array added as part of implementation.
