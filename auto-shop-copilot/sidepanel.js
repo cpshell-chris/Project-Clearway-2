@@ -3148,6 +3148,10 @@ function rocPrevStep() {
 
 // ── Init & wire-up ──────────────────────────────────────────────────
 
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function initRocWizard() {
   // Navigation buttons
   document.getElementById('roc-back-btn')  ?.addEventListener('click', rocPrevStep);
@@ -3359,6 +3363,7 @@ async function rocSavePhone() {
   const phone = input?.value?.trim();
   if (!phone) return;
   const btn = document.getElementById('roc-phone-save-btn');
+  if (!btn) return;
   btn.disabled = true; btn.textContent = 'Saving…';
 
   const customerId = tmLoadedData?.summary?.customerId;
@@ -3377,7 +3382,8 @@ async function rocSavePhone() {
     rocSaveState();
     document.getElementById('roc-phone-edit')?.classList.remove('open');
     rocSetVerify('phone', true, 'On file', '');
-    document.getElementById('roc-contact-pref-row').style.display = 'block';
+    const prefRowEl = document.getElementById('roc-contact-pref-row');
+    if (prefRowEl) prefRowEl.style.display = 'block';
   } catch (err) {
     showRocError(`Could not save phone: ${err.message}`);
   }
@@ -3391,6 +3397,7 @@ async function rocSaveAddress() {
   const zip    = document.getElementById('roc-zip-input')?.value?.trim();
   if (!street || !city || !state || !zip) return;
   const btn = document.getElementById('roc-address-save-btn');
+  if (!btn) return;
   btn.disabled = true; btn.textContent = 'Saving…';
 
   const customerId = tmLoadedData?.summary?.customerId;
@@ -3576,8 +3583,8 @@ function rocPopulateCombustion() {
   if (techEl && Array.isArray(intel.technicalDetail)) {
     techEl.innerHTML = intel.technicalDetail.map(item =>
       `<div style="margin-bottom:8px;">
-        <div style="font-size:11px; font-weight:700; color:#9A3412;">${item.item}</div>
-        <div style="font-size:12px; color:#3a3a3a; line-height:1.5;">${item.detail}</div>
+        <div style="font-size:11px; font-weight:700; color:#9A3412;">${escapeHtml(item.item)}</div>
+        <div style="font-size:12px; color:#3a3a3a; line-height:1.5;">${escapeHtml(item.detail)}</div>
       </div>`
     ).join('');
   }
@@ -3600,16 +3607,16 @@ function rocRenderServiceChecklist(checklist) {
   el.innerHTML = checklist.map((svc, idx) => {
     if (svc.status === 'on-ro') {
       return `<div class="roc-service-row">
-        <span class="roc-service-name">${svc.name}</span>
+        <span class="roc-service-name">${escapeHtml(svc.name)}</span>
         <span class="roc-on-ro-badge">On RO</span>
       </div>`;
     }
     // NOTE: No inline onclick — MV3 Content Security Policy blocks inline handlers.
     // The click is handled by event delegation on #roc-intel-services in initRocWizard().
     return `<div class="roc-service-row" id="roc-svc-row-${idx}">
-      <span class="roc-service-name">${svc.name}</span>
+      <span class="roc-service-name">${escapeHtml(svc.name)}</span>
       <button class="roc-add-ro-btn" id="roc-add-ro-${idx}" type="button"
-        data-idx="${idx}" data-name="${svc.name.replace(/"/g, '&quot;')}">Add to RO</button>
+        data-idx="${idx}" data-name="${escapeHtml(svc.name)}">Add to RO</button>
     </div>`;
   }).join('');
 }
@@ -3745,7 +3752,7 @@ function rocRenderExhaustChat() {
   const el = document.getElementById('roc-exhaust-history');
   if (!el) return;
   el.innerHTML = rocState.exhaustHistory.map(m =>
-    `<div class="roc-chat-bubble ${m.role}">${m.content.replace(/\n/g, '<br>')}</div>`
+    `<div class="roc-chat-bubble ${m.role}">${escapeHtml(m.content).replace(/\n/g, '<br>')}</div>`
   ).join('');
   el.scrollTo(0, el.scrollHeight);
 }
@@ -3800,6 +3807,7 @@ async function rocExhaustCall(situationType, detail) {
     rocSaveState();
   } catch (err) {
     rocState.exhaustHistory.push({ role: 'assistant', content: 'Something went wrong. Please try again.' });
+    rocSaveState();
   }
 
   typing.remove();
