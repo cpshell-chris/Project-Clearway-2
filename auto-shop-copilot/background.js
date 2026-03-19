@@ -1205,37 +1205,19 @@ async function tmTestConnection() {
 }
 
 async function tmGetRepairOrder(roNumber) {
-  const baseUrl = ASC_CLOUD_RUN_URL;
+  const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
   console.log('[ASC] Fetching RO:', roNumber, 'from', baseUrl);
 
-  const endpointPatterns = [
-    `${baseUrl}/repair-order/${roNumber}`,
-    `${baseUrl}/ro/${roNumber}`,
-    `${baseUrl}/api/repair-order/${roNumber}`,
-    `${baseUrl}/tekmetric/repair-order/${roNumber}`,
-    `${baseUrl}/repair-orders/${roNumber}`,
-  ];
-
-  for (const url of endpointPatterns) {
-    try {
-      console.log('[ASC] Trying:', url);
-      const res = await fetch(url);
-      console.log('[ASC] Response status:', res.status);
-      if (res.status === 404) continue;
-      if (!res.ok) {
-        const text = await res.text();
-        console.log('[ASC] Error response:', text);
-        continue;
-      }
-      const data = await res.json();
-      console.log('[ASC] Successfully fetched RO data');
-      return tmFormatROData(data);
-    } catch (err) {
-      console.log('[ASC] Endpoint failed:', err.message);
-    }
+  const res = await fetch(`${baseUrl}/ro/${roNumber}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let serverMessage = '';
+    try { serverMessage = JSON.parse(text)?.message; } catch (_) {}
+    throw new Error(serverMessage || `Failed to fetch RO #${roNumber} (HTTP ${res.status})`);
   }
-
-  throw new Error(`RO #${roNumber} not found. Tried multiple endpoint patterns - check console for details.`);
+  const data = await res.json();
+  console.log('[ASC] Successfully fetched RO data');
+  return tmFormatROData(data);
 }
 
 async function tmSearch(query, searchType) {
@@ -1393,7 +1375,12 @@ async function swTestConnection() {
 async function swFetchRepairOrder(roId) {
   const baseUrl = ASC_CLOUD_RUN_URL.replace(/\/$/, '');
   const res = await fetch(`${baseUrl}/ro/${roId}`);
-  if (!res.ok) throw new Error(`Failed to fetch RO #${roId}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let serverMessage = '';
+    try { serverMessage = JSON.parse(text)?.message; } catch (_) {}
+    throw new Error(serverMessage || `Failed to fetch RO #${roId} (HTTP ${res.status})`);
+  }
   const data = await res.json();
   if (!data.success) throw new Error(data.message || 'RO fetch failed');
   return {
