@@ -3171,7 +3171,8 @@ function initRocWizard() {
   // Intake write-back triggers
   document.getElementById('roc-verify-phone')  ?.addEventListener('click', () => rocToggleInlineEdit('phone'));
   document.getElementById('roc-verify-address')?.addEventListener('click', () => rocToggleInlineEdit('address'));
-  document.getElementById('roc-phone-save-btn')  ?.addEventListener('click', rocSavePhone);
+  document.getElementById('roc-phone-save-btn')         ?.addEventListener('click', rocSavePhone);
+  document.getElementById('roc-phone-primary-save-btn') ?.addEventListener('click', rocSavePrimaryPhone);
   document.getElementById('roc-address-save-btn')?.addEventListener('click', rocSaveAddress);
   document.getElementById('roc-pref-call')?.addEventListener('click', () => rocSetContactPref('call'));
   document.getElementById('roc-pref-text')?.addEventListener('click', () => rocSetContactPref('text'));
@@ -3307,6 +3308,10 @@ function rocPopulateIntake() {
   rocState.intakeVerification.phone = hasPhone;
   rocSetVerify('phone', hasPhone, 'On file', 'Tap to add', hasPhone ? null : 'phone');
 
+  // Multi-phone management (shown when 2+ phones on file)
+  const phones = s.phones || [];
+  rocRenderPhoneList(phones);
+
   // Contact pref (show only when phone present)
   const prefRow = document.getElementById('roc-contact-pref-row');
   if (prefRow) prefRow.style.display = hasPhone ? 'block' : 'none';
@@ -3344,6 +3349,76 @@ function rocToggleInlineEdit(key) {
   if (!item || !edit) return;
   if (!item.classList.contains('warning')) return;
   edit.classList.toggle('open');
+}
+
+function rocRenderPhoneList(phones) {
+  const mgmt = document.getElementById('roc-phone-mgmt');
+  const list  = document.getElementById('roc-phone-list');
+  if (!mgmt || !list) return;
+
+  if (!phones || phones.length < 2) {
+    mgmt.style.display = 'none';
+    return;
+  }
+
+  mgmt.style.display = 'block';
+
+  // Determine initial selected index (primary phone, or first)
+  if (rocState.intakeVerification.selectedPhoneIdx == null) {
+    rocState.intakeVerification.selectedPhoneIdx = phones.findIndex(p => p.primary) ?? 0;
+    if (rocState.intakeVerification.selectedPhoneIdx < 0) rocState.intakeVerification.selectedPhoneIdx = 0;
+  }
+
+  list.innerHTML = '';
+  phones.forEach((ph, idx) => {
+    const item = document.createElement('div');
+    item.className = 'roc-phone-item' + (idx === rocState.intakeVerification.selectedPhoneIdx ? ' selected' : '');
+    item.dataset.idx = idx;
+
+    const star = document.createElement('span');
+    star.className = 'roc-phone-star';
+    star.textContent = '★';
+
+    const num = document.createElement('span');
+    num.className = 'roc-phone-num';
+    num.textContent = ph.number || ph.phoneNumber || '';
+
+    const type = document.createElement('span');
+    type.className = 'roc-phone-type-lbl';
+    type.textContent = (ph.type || 'Mobile').toLowerCase();
+
+    item.appendChild(star);
+    item.appendChild(num);
+    item.appendChild(type);
+    item.addEventListener('click', () => {
+      rocState.intakeVerification.selectedPhoneIdx = idx;
+      rocSaveState();
+      // Re-render selection state
+      list.querySelectorAll('.roc-phone-item').forEach((el, i) => el.classList.toggle('selected', i === idx));
+    });
+    list.appendChild(item);
+  });
+}
+
+async function rocSavePrimaryPhone() {
+  const phones = tmLoadedData?.summary?.phones;
+  if (!phones || phones.length < 2) return;
+  const selectedIdx = rocState.intakeVerification.selectedPhoneIdx ?? 0;
+  const customerId  = tmLoadedData?.summary?.customerId;
+  if (!customerId) {
+    showRocError('Could not find customer ID. Update manually in TekMetric.');
+    return;
+  }
+  const btn = document.getElementById('roc-phone-primary-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const updatedPhones = phones.map((ph, i) => ({ ...ph, primary: i === selectedIdx }));
+    await rocSend({ action: 'asc_rocUpdateCustomer', customerId, fields: { phones: updatedPhones } });
+    if (btn) { btn.disabled = false; btn.textContent = 'Saved'; setTimeout(() => { if (btn) btn.textContent = 'Save Primary to TekMetric'; }, 2000); }
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Primary to TekMetric'; }
+    showRocError(`Could not save primary phone: ${err.message}`);
+  }
 }
 
 // NOTE: Contact preference (call vs. text) is stored in rocState session only.

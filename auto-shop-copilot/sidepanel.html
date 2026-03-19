@@ -541,6 +541,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
 .roc-contact-pref { display: flex; gap: 6px; margin-top: 8px; }
 .roc-pref-chip { flex: 1; border: 1.5px solid #FED7AA; background: white; border-radius: 20px; padding: 5px 0; font-size: 11px; font-weight: 600; color: #9A3412; cursor: pointer; text-align: center; transition: all 0.15s; }
 .roc-pref-chip.selected { background: #EA580C; border-color: #EA580C; color: white; }
+.roc-phone-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #FED7AA; border-radius: 8px; margin-bottom: 4px; background: #FFF7ED; cursor: pointer; transition: all 0.15s; }
+.roc-phone-item.selected { border-color: #EA580C; background: #FFEDD5; }
+.roc-phone-star { font-size: 13px; color: #d1d5db; flex-shrink: 0; transition: color 0.15s; }
+.roc-phone-item.selected .roc-phone-star { color: #EA580C; }
+.roc-phone-num { font-size: 12px; color: #3a3a3a; flex: 1; }
+.roc-phone-type-lbl { font-size: 10px; color: #9a8880; text-transform: capitalize; }
 .roc-dvi-checklist-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid #FEF3E8; }
 .roc-dvi-checklist-item:last-child { border-bottom: none; }
 .roc-dvi-item-name { font-size: 12px; font-weight: 600; color: #3a3a3a; }
@@ -1034,9 +1040,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
         <div class="roc-step-rail" id="roc-step-rail">
           <button class="roc-step-pill active" id="roc-pill-intake"      data-step="intake"      type="button">Intake</button>
           <span class="roc-step-connector">—</span>
-          <button class="roc-step-pill"        id="roc-pill-compression" data-step="compression" type="button">Compression</button>
+          <button class="roc-step-pill"        id="roc-pill-compression" data-step="compression" type="button">Compress</button>
           <span class="roc-step-connector">—</span>
-          <button class="roc-step-pill"        id="roc-pill-combustion"  data-step="combustion"  type="button">Combustion</button>
+          <button class="roc-step-pill"        id="roc-pill-combustion"  data-step="combustion"  type="button">Combust</button>
           <span class="roc-step-connector">—</span>
           <button class="roc-step-pill"        id="roc-pill-exhaust"     data-step="exhaust"     type="button">Exhaust</button>
         </div>
@@ -1062,6 +1068,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
           <div class="roc-inline-edit" id="roc-phone-edit">
             <input type="tel" id="roc-phone-input" placeholder="Enter phone number">
             <button class="roc-inline-btn" id="roc-phone-save-btn" type="button">Save to TekMetric</button>
+          </div>
+
+          <!-- Multi-phone primary selector (shown when 2+ phones on file) -->
+          <div id="roc-phone-mgmt" style="display:none; padding: 0 0 8px;">
+            <div style="font-size:11px; color:#6c757d; margin-bottom:6px;">Select primary number:</div>
+            <div id="roc-phone-list"></div>
+            <button class="roc-inline-btn" id="roc-phone-primary-save-btn" type="button" style="margin-top:6px; width:100%;">Save Primary to TekMetric</button>
           </div>
 
           <!-- Contact preference -->

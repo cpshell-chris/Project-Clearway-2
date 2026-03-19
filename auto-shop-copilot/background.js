@@ -1281,10 +1281,14 @@ function tmFormatROData(data) {
   // Try ro.customerConcerns first (legacy/other endpoints), then fall back to jobs.
   let concernsList = [];
   if (Array.isArray(ro.customerConcerns) && ro.customerConcerns.length > 0) {
-    concernsList = ro.customerConcerns.map(c => c.concern || c.description || String(c)).filter(Boolean);
+    concernsList = ro.customerConcerns.map(c => c.concern || c.description || c.text || String(c)).filter(Boolean);
   }
   if (concernsList.length === 0) {
-    concernsList = jobs.map(job => job.concern || job.complaint || '').filter(Boolean);
+    concernsList = jobs.map(job => job.concern || job.complaint || job.customerConcern || '').filter(Boolean);
+  }
+  // Fallback: use job names as proxies for documented concerns (TekMetric job names often ARE the concern)
+  if (concernsList.length === 0) {
+    concernsList = jobs.map(job => job.name || job.laborName || '').filter(n => n && !/^Service \d+$/.test(n));
   }
   const concerns = concernsList.length > 0
     ? concernsList.map(c => `  • ${c}`).join('\n')
@@ -1365,10 +1369,13 @@ ${jobs.map((job,i) => `Job ${i+1}: ${JSON.stringify(job)}`).join('\n')}
       advisor:      advisor !== 'N/A' ? advisor : '',
       hasPhone:     phone !== 'N/A' && !!phone,
       hasEmail:     email !== 'N/A' && !!email,
-      hasTech:      jobs.some(j => j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName)),
+      hasTech:      !!(ro.technicianId || ro.defaultTechnicianId ||
+                      (ro.technician && (ro.technician.firstName || ro.technician.id)) ||
+                      jobs.some(j => j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName))),
       concernsList, // raw array — used by RO Copilot for display and auto-check
       customerId:   customer.id || null,
-      shopId:       ro.shopId || ro.shop?.id || null
+      shopId:       ro.shopId || ro.shop?.id || null,
+      phones:       Array.isArray(customer.phones) ? customer.phones : []
     }
   };
 }
