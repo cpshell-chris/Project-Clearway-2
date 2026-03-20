@@ -1353,7 +1353,7 @@ ${jobs.map((job,i) => `Job ${i+1}: ${JSON.stringify(job)}`).join('\n')}
       hasEmail:     email !== 'N/A' && !!email,
       hasTech:      !!(ro.technicianId || ro.defaultTechnicianId ||
                       (ro.technician && (ro.technician.firstName || ro.technician.id)) ||
-                      jobs.some(j => j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName))),
+                      jobs.some(j => j.technicianId || (j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName)))),
       concernsList, // raw array — used by RO Copilot for display and auto-check
       customerId:   customer.id || null,
       shopId:       ro.shopId || ro.shop?.id || null,
