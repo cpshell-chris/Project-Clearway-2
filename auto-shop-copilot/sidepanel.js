@@ -3168,6 +3168,16 @@ function initRocWizard() {
   // Intake advance
   document.getElementById('roc-intake-advance')?.addEventListener('click', () => rocGoToStep('compression'));
 
+  // Intake refresh — re-fetch RO data and repopulate
+  document.getElementById('roc-intake-refresh')?.addEventListener('click', () => {
+    if (!lastRoId) return;
+    const btn = document.getElementById('roc-intake-refresh');
+    if (btn) { btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none'; }
+    tmAutoFetchRO(lastRoId).finally(() => {
+      if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+    });
+  });
+
   // Intake write-back triggers
   document.getElementById('roc-verify-phone')  ?.addEventListener('click', () => rocToggleInlineEdit('phone'));
   document.getElementById('roc-verify-address')?.addEventListener('click', () => rocToggleInlineEdit('address'));
@@ -3324,10 +3334,17 @@ function rocPopulateIntake() {
   rocState.intakeVerification.address = hasAddress;
   rocSetVerify('address', hasAddress, 'On file', 'Tap to add', hasAddress ? null : 'address');
 
-  // Tech assigned
-  const hasTech = !!s.hasTech;
+  // Tech assigned — show partial counts when some but not all jobs have a tech
+  const hasTech      = !!s.hasTech;
+  const techTotal    = s.techJobsTotal    ?? 0;
+  const techAssigned = s.techJobsAssigned ?? 0;
   rocState.intakeVerification.techAssigned = hasTech;
-  rocSetVerify('tech', hasTech, 'Assigned', 'Not assigned');
+  let techOkLabel   = 'Assigned';
+  let techWarnLabel = 'Not assigned';
+  if (techTotal > 0 && techAssigned > 0 && !hasTech) {
+    techWarnLabel = `${techAssigned} / ${techTotal} jobs`;
+  }
+  rocSetVerify('tech', hasTech, techOkLabel, techWarnLabel);
   const techNote = document.getElementById('roc-tech-note');
   if (techNote) techNote.style.display = hasTech ? 'none' : 'block';
 

@@ -1052,7 +1052,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica
       <!-- ── STEP 1: INTAKE ─────────────────────────────────────── -->
       <div class="roc-screen active" id="roc-screen-intake">
         <div class="roc-body">
-          <div class="roc-section-label">Verify Before You Begin</div>
+          <div class="roc-section-label" style="display:flex; align-items:center; justify-content:space-between;">
+            <span>Verify Before You Begin</span>
+            <button id="roc-intake-refresh" type="button" title="Refresh RO data" style="background:none; border:none; cursor:pointer; padding:2px 4px; color:#6c757d; line-height:1; font-size:15px;">&#x21BB;</button>
+          </div>
 
           <!-- Concern -->
           <div class="roc-verify-item" id="roc-verify-concern">

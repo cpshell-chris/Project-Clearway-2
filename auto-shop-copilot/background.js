@@ -1351,9 +1351,14 @@ ${jobs.map((job,i) => `Job ${i+1}: ${JSON.stringify(job)}`).join('\n')}
       advisor:      advisor !== 'N/A' ? advisor : '',
       hasPhone:     phone !== 'N/A' && !!phone,
       hasEmail:     email !== 'N/A' && !!email,
-      hasTech:      !!(ro.technicianId || ro.defaultTechnicianId ||
-                      (ro.technician && (ro.technician.firstName || ro.technician.id)) ||
-                      jobs.some(j => j.technicianId || (j.technician && (j.technician.firstName || j.technician.id || j.technician.lastName)))),
+      hasTech:      (() => {
+                      const total    = jobs.length;
+                      const assigned = jobs.filter(j => j.technicianId || (j.technician && (j.technician.id || j.technician.firstName || j.technician.lastName))).length;
+                      if (total > 0) return assigned === total;
+                      return !!(ro.technicianId || ro.defaultTechnicianId || (ro.technician && (ro.technician.firstName || ro.technician.id)));
+                    })(),
+      techJobsTotal:    jobs.length,
+      techJobsAssigned: jobs.filter(j => j.technicianId || (j.technician && (j.technician.id || j.technician.firstName || j.technician.lastName))).length,
       concernsList, // raw array — used by RO Copilot for display and auto-check
       customerId:   customer.id || null,
       shopId:       ro.shopId || ro.shop?.id || null,
